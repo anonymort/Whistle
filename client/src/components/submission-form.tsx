@@ -123,6 +123,24 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Hospital Selection */}
+        <FormField
+          control={form.control}
+          name="hospital"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <HospitalSelector
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  required
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Message Input */}
         <FormField
           control={form.control}
