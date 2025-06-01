@@ -5,12 +5,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import WhistleblowingPortal from "@/pages/whistleblowing-portal";
 import AdminDashboard from "@/pages/admin-dashboard";
+import About from "@/pages/about";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={WhistleblowingPortal} />
       <Route path="/portal" component={WhistleblowingPortal} />
+      <Route path="/about" component={About} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={WhistleblowingPortal} />
     </Switch>

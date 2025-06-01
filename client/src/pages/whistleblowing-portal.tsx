@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Shield, Lock, Clock, File, Scale3d, KeyRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import SubmissionForm from "@/components/submission-form";
 import SecurityBanner from "@/components/security-banner";
 import SuccessModal from "@/components/success-modal";
@@ -16,13 +18,27 @@ export default function WhistleblowingPortal() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Shield className="text-white w-5 h-5" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <Shield className="text-white w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">WhistleLite</h1>
+                <p className="text-sm text-gray-600">NHS Secure Anonymous Reporting Portal</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">WhistleLite</h1>
-              <p className="text-sm text-gray-600">NHS Secure Anonymous Reporting Portal</p>
+            <div className="flex items-center space-x-3">
+              <Link href="/about">
+                <Button variant="ghost" size="sm">
+                  About
+                </Button>
+              </Link>
+              <Link href="/admin">
+                <Button variant="outline" size="sm">
+                  Admin Dashboard
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
