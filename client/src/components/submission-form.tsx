@@ -193,7 +193,9 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
-                    onCheckedChange={field.onChange}
+                    onCheckedChange={(checked) => {
+                      setTimeout(() => field.onChange(checked), 0);
+                    }}
                     className="mt-1"
                   />
                 </FormControl>
@@ -215,7 +217,9 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
-                    onCheckedChange={field.onChange}
+                    onCheckedChange={(checked) => {
+                      setTimeout(() => field.onChange(checked), 0);
+                    }}
                     className="mt-1"
                   />
                 </FormControl>
