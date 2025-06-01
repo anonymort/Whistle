@@ -8,7 +8,7 @@ export default function SecurityBanner() {
         <div>
           <h3 className="font-semibold text-primary mb-1">End-to-End Encrypted</h3>
           <p className="text-sm text-blue-700">
-            Your submission is encrypted in your browser before transmission. We cannot decrypt or read your message.
+            Your submission is encrypted in your browser before transmission. Only authorized NHS administrators can decrypt messages for investigation purposes.
           </p>
         </div>
       </div>

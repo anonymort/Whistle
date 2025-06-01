@@ -49,7 +49,7 @@ export default function WhistleblowingPortal() {
               <KeyRound className="text-primary w-5 h-5" />
               <h3 className="font-semibold text-gray-900">Complete Anonymity</h3>
             </div>
-            <p className="text-sm text-gray-600">No IP addresses, cookies, or tracking. Your identity remains completely protected.</p>
+            <p className="text-sm text-gray-600">Your identity remains protected through encryption. Rate limiting may temporarily store IP addresses for abuse prevention.</p>
           </div>
           
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
