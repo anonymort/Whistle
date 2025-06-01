@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 220 90% 54%; /* #1E40AF */
+  --primary-foreground: 210 40% 98%;
+  --secondary: 220 14.3% 25.9%; /* #374151 */
+  --secondary-foreground: 210 40% 98%;
+  --accent: 60 4.8% 95.9%;
+  --accent-foreground: 24 9.8% 10%;
+  --destructive: 0 84.2% 60.2%; /* #DC2626 */
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 20 14.3% 4.1%;
+  --radius: 0.5rem;
+  
+  /* Custom colors for NHS portal */
+  --bg-soft: 220 13% 98%; /* #F9FAFB */
+  --success: 158 64% 52%; /* #059669 */
+  --warning: 25 95% 53%; /* #D97706 */
+  --error: 0 84% 60%; /* #DC2626 */
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 220 90% 54%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 240 4.9% 83.9%;
+  
+  /* Dark mode custom colors */
+  --bg-soft: 240 10% 3.9%;
+  --success: 158 64% 52%;
+  --warning: 25 95% 53%;
+  --error: 0 84% 60%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+}
+
+@layer utilities {
+  .bg-bg-soft {
+    background-color: hsl(var(--bg-soft));
+  }
+  
+  .text-primary {
+    color: hsl(var(--primary));
+  }
+  
+  .text-secondary {
+    color: hsl(var(--secondary));
+  }
+  
+  .text-success {
+    color: hsl(var(--success));
+  }
+  
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+  
+  .text-error {
+    color: hsl(var(--error));
+  }
+  
+  .bg-success {
+    background-color: hsl(var(--success));
+  }
+  
+  .bg-warning {
+    background-color: hsl(var(--warning));
+  }
+  
+  .bg-error {
+    background-color: hsl(var(--error));
+  }
+  
+  .border-primary {
+    border-color: hsl(var(--primary));
+  }
+  
+  .hover\:bg-blue-50:hover {
+    background-color: hsl(210 100% 97%);
+  }
+  
+  .hover\:bg-blue-700:hover {
+    background-color: hsl(220 91% 45%);
+  }
+  
+  .focus\:ring-primary:focus {
+    --tw-ring-color: hsl(var(--primary));
+  }
+  
+  .focus\:ring-blue-200:focus {
+    --tw-ring-color: hsl(220 91% 85%);
+  }
+}
+
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Custom scrollbar for better UX */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}

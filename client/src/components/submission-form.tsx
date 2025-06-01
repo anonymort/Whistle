@@ -1,0 +1,248 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { Shield, LoaderPinwheel } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { encryptData } from "@/lib/encryption";
+import FileUpload from "@/components/file-upload";
+
+const submissionSchema = z.object({
+  message: z.string().min(10, "Message must be at least 10 characters").max(5000, "Message must be less than 5000 characters"),
+  replyEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
+  consentSubmission: z.boolean().refine(val => val === true, "You must consent to submit"),
+  consentGdpr: z.boolean().refine(val => val === true, "You must acknowledge the privacy policy"),
+});
+
+type SubmissionFormData = z.infer<typeof submissionSchema>;
+
+interface SubmissionFormProps {
+  onSuccess: () => void;
+}
+
+export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [encryptedFile, setEncryptedFile] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const form = useForm<SubmissionFormData>({
+    resolver: zodResolver(submissionSchema),
+    defaultValues: {
+      message: "",
+      replyEmail: "",
+      consentSubmission: false,
+      consentGdpr: false,
+    },
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: async (data: {
+      encryptedMessage: string;
+      encryptedFile: string | null;
+      replyEmail: string;
+      sha256Hash: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/submit", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      form.reset();
+      setSelectedFile(null);
+      setEncryptedFile(null);
+      onSuccess();
+    },
+    onError: (error) => {
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Please try again later",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = async (data: SubmissionFormData) => {
+    try {
+      // Encrypt the message
+      const encryptedMessage = await encryptData(data.message);
+      
+      // Create submission payload
+      const payload = {
+        encryptedMessage,
+        encryptedFile,
+        replyEmail: data.replyEmail || "",
+        sha256Hash: "", // Will be generated on server
+      };
+
+      submitMutation.mutate(payload);
+    } catch (error) {
+      toast({
+        title: "Encryption Failed",
+        description: "Unable to encrypt your submission. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFileProcessed = (file: File, encryptedData: string) => {
+    setSelectedFile(file);
+    setEncryptedFile(encryptedData);
+  };
+
+  const handleFileRemoved = () => {
+    setSelectedFile(null);
+    setEncryptedFile(null);
+  };
+
+  const messageLength = form.watch("message")?.length || 0;
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Message Input */}
+        <FormField
+          control={form.control}
+          name="message"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm font-medium text-gray-700">
+                Your Message <span className="text-error">*</span>
+              </FormLabel>
+              <FormControl>
+                <Textarea
+                  {...field}
+                  rows={6}
+                  placeholder="Describe your concern in detail. Minimum 10 characters required."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none transition-colors"
+                />
+              </FormControl>
+              <div className="flex justify-between items-center">
+                <FormMessage />
+                <span className={`text-sm ${
+                  messageLength < 10 ? 'text-error' : 
+                  messageLength > 4000 ? 'text-warning' : 
+                  'text-gray-500'
+                }`}>
+                  {messageLength} / 5000
+                </span>
+              </div>
+            </FormItem>
+          )}
+        />
+
+        {/* File Upload */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Supporting Documents (Optional)
+          </label>
+          <FileUpload
+            onFileProcessed={handleFileProcessed}
+            onFileRemoved={handleFileRemoved}
+            selectedFile={selectedFile}
+          />
+        </div>
+
+        {/* Anonymous Reply Email */}
+        <FormField
+          control={form.control}
+          name="replyEmail"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm font-medium text-gray-700">
+                Anonymous Reply Email (Optional)
+              </FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  type="email"
+                  placeholder="your-alias@anonaddy.me (for anonymous replies only)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                />
+              </FormControl>
+              <p className="text-xs text-gray-500 mt-1">
+                Use an anonymous email forwarding service like AnonAddy for secure replies
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Consent Checkboxes */}
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="consentSubmission"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-1"
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-sm text-gray-700">
+                    I consent to submitting this anonymous report. I understand that my submission will be encrypted and stored securely for up to 90 days. <span className="text-error">*</span>
+                  </FormLabel>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="consentGdpr"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-1"
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-sm text-gray-700">
+                    I acknowledge that I have read and understand the{" "}
+                    <a href="#" className="text-primary hover:underline">Privacy Policy</a> and{" "}
+                    <a href="#" className="text-primary hover:underline">Data Retention Policy</a>. <span className="text-error">*</span>
+                  </FormLabel>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Submit Button */}
+        <div className="pt-4">
+          <Button
+            type="submit"
+            disabled={submitMutation.isPending}
+            className="w-full bg-primary text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitMutation.isPending ? (
+              <>
+                <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
+                Encrypting & Submitting...
+              </>
+            ) : (
+              <>
+                <Shield className="w-4 h-4 mr-2" />
+                Submit Securely
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}

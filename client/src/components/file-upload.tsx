@@ -1,0 +1,196 @@
+import { useState, useRef } from "react";
+import { CloudUpload, File, X, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { stripMetadata } from "@/lib/file-utils";
+import { encryptData } from "@/lib/encryption";
+
+interface FileUploadProps {
+  onFileProcessed: (file: File, encryptedData: string) => void;
+  onFileRemoved: () => void;
+  selectedFile: File | null;
+}
+
+export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFile }: FileUploadProps) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleFileSelect = async (file: File) => {
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload PDF, JPG, PNG, or DOCX files only.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (2MB limit)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "File size must be less than 2MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Strip metadata from file
+      const processedFile = await stripMetadata(file);
+      
+      // Convert to base64 for encryption
+      const fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix to get just the base64 data
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(processedFile);
+      });
+
+      // Encrypt the file data
+      const encryptedData = await encryptData(fileData);
+      
+      onFileProcessed(file, encryptedData);
+
+      toast({
+        title: "File Processed",
+        description: "File has been encrypted and metadata removed.",
+      });
+
+    } catch (error) {
+      console.error("File processing error:", error);
+      toast({
+        title: "Processing Failed",
+        description: "Unable to process file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+  };
+
+  const handleRemoveFile = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    onFileRemoved();
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  };
+
+  if (selectedFile) {
+    return (
+      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <File className="w-5 h-5 text-gray-400" />
+            <span className="text-sm text-gray-700 font-medium">{selectedFile.name}</span>
+            <span className="text-xs text-gray-500">({formatFileSize(selectedFile.size)})</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleRemoveFile}
+            className="text-error hover:text-red-700 transition-colors"
+            disabled={isProcessing}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {isProcessing && (
+          <div className="mt-2 flex items-center space-x-2 text-xs text-blue-600">
+            <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <span>Processing and encrypting file...</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <input
+        ref={fileInputRef}
+        type="file"
+        onChange={handleFileChange}
+        accept=".pdf,.jpg,.jpeg,.png,.docx"
+        className="hidden"
+        disabled={isProcessing}
+      />
+      
+      <div
+        onClick={() => fileInputRef.current?.click()}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        className={`flex items-center justify-center w-full px-6 py-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+          isProcessing 
+            ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
+            : 'border-gray-300 hover:border-primary hover:bg-blue-50'
+        }`}
+      >
+        <div className="text-center">
+          {isProcessing ? (
+            <>
+              <div className="w-6 h-6 border border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-sm text-gray-600">Processing file...</p>
+            </>
+          ) : (
+            <>
+              <CloudUpload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600">
+                <span className="font-medium text-primary">Click to upload</span> or drag and drop
+              </p>
+              <p className="text-xs text-gray-500 mt-1">PDF, JPG, PNG, DOCX (max 2MB)</p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {isProcessing && (
+        <div className="absolute inset-0 bg-white bg-opacity-75 rounded-lg flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-sm text-gray-600">Encrypting...</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

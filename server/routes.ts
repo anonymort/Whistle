@@ -1,0 +1,112 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertSubmissionSchema } from "@shared/schema";
+import crypto from "crypto";
+import rateLimit from "express-rate-limit";
+
+// Rate limiter: 5 submissions per minute per IP
+const submitRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5,
+  message: { error: "Too many submissions. Please wait before trying again." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply rate limiting to submission endpoint
+  app.use("/api/submit", submitRateLimit);
+
+  // Submit encrypted whistleblowing report
+  app.post("/api/submit", async (req, res) => {
+    try {
+      // Validate request body
+      const validatedData = insertSubmissionSchema.parse(req.body);
+
+      // Additional validation
+      if (!validatedData.encryptedMessage || validatedData.encryptedMessage.length < 10) {
+        return res.status(400).json({ error: "Invalid message content" });
+      }
+
+      // Check file size if present (2MB limit for base64 encoded data)
+      if (validatedData.encryptedFile) {
+        const fileBuffer = Buffer.from(validatedData.encryptedFile, 'base64');
+        if (fileBuffer.length > 2 * 1024 * 1024) {
+          return res.status(413).json({ error: "File too large. Maximum size is 2MB." });
+        }
+      }
+
+      // Validate email format if provided
+      if (validatedData.replyEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(validatedData.replyEmail)) {
+          return res.status(400).json({ error: "Invalid email format" });
+        }
+      }
+
+      // Create submission hash for deduplication
+      const submissionHash = crypto
+        .createHash('sha256')
+        .update(JSON.stringify(validatedData))
+        .digest('hex');
+
+      const submissionData = {
+        ...validatedData,
+        sha256Hash: submissionHash,
+      };
+
+      // Store the submission
+      const submission = await storage.createSubmission(submissionData);
+
+      // Clean up old submissions (90-day retention)
+      await storage.purgeOldSubmissions();
+
+      res.status(201).json({ 
+        message: "Submission received successfully",
+        id: submission.id,
+        submittedAt: submission.submittedAt 
+      });
+
+    } catch (error) {
+      console.error("Submission error:", error);
+      
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid submission data" });
+      }
+      
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Health check endpoint
+  app.get("/api/health", async (req, res) => {
+    try {
+      const submissionCount = await storage.getSubmissionCount();
+      res.json({ 
+        status: "healthy",
+        submissionCount,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ status: "unhealthy", error: "Storage error" });
+    }
+  });
+
+  // Data purge endpoint (for admin use)
+  app.post("/api/purge", async (req, res) => {
+    try {
+      const purgedCount = await storage.purgeOldSubmissions();
+      res.json({ 
+        message: `Purged ${purgedCount} old submissions`,
+        purgedCount 
+      });
+    } catch (error) {
+      console.error("Purge error:", error);
+      res.status(500).json({ error: "Purge operation failed" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
