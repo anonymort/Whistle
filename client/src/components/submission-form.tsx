@@ -17,8 +17,12 @@ import FileUpload from "@/components/file-upload";
 const submissionSchema = z.object({
   message: z.string().min(10, "Message must be at least 10 characters").max(5000, "Message must be less than 5000 characters"),
   replyEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
-  consentSubmission: z.boolean().refine(val => val === true, "You must consent to submit"),
-  consentGdpr: z.boolean().refine(val => val === true, "You must acknowledge the privacy policy"),
+  consentSubmission: z.boolean().refine((val) => val === true, {
+    message: "You must consent to submit",
+  }),
+  consentGdpr: z.boolean().refine((val) => val === true, {
+    message: "You must acknowledge the privacy policy",
+  }),
 });
 
 type SubmissionFormData = z.infer<typeof submissionSchema>;
@@ -40,6 +44,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
       consentSubmission: false,
       consentGdpr: false,
     },
+    mode: "onChange",
   });
 
   const submitMutation = useMutation({
