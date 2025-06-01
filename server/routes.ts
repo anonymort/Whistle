@@ -4,6 +4,30 @@ import { storage } from "./storage";
 import { insertSubmissionSchema } from "@shared/schema";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
+import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
+
+// File signature validation for security
+function validateFileSignature(signature: Buffer): boolean {
+  const validSignatures = [
+    // Images
+    [0xFF, 0xD8, 0xFF], // JPEG
+    [0x89, 0x50, 0x4E, 0x47], // PNG
+    [0x47, 0x49, 0x46, 0x38], // GIF
+    [0x52, 0x49, 0x46, 0x46], // WEBP/RIFF
+    // Documents
+    [0x25, 0x50, 0x44, 0x46], // PDF
+    [0x50, 0x4B, 0x03, 0x04], // ZIP/DOCX/XLSX
+    [0xD0, 0xCF, 0x11, 0xE0], // DOC/XLS
+    // Audio
+    [0x49, 0x44, 0x33], // MP3
+    [0x52, 0x49, 0x46, 0x46], // WAV
+    [0x4F, 0x67, 0x67, 0x53], // OGG
+  ];
+
+  return validSignatures.some(validSig => 
+    validSig.every((byte, index) => signature[index] === byte)
+  );
+}
 
 // Rate limiter: 5 submissions per minute per IP
 const submitRateLimit = rateLimit({
@@ -18,6 +42,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply rate limiting to submission endpoint
   app.use("/api/submit", submitRateLimit);
 
+  // Setup automated data retention cleanup (runs daily)
+  setInterval(async () => {
+    try {
+      const deletedCount = await storage.purgeOldSubmissions();
+      if (deletedCount > 0) {
+        console.log(`Automated cleanup: Purged ${deletedCount} old submissions`);
+      }
+    } catch (error) {
+      console.error("Automated cleanup failed:", error);
+    }
+  }, 24 * 60 * 60 * 1000); // 24 hours
+
   // Submit encrypted whistleblowing report
   app.post("/api/submit", async (req, res) => {
     try {
@@ -29,11 +65,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid message content" });
       }
 
-      // Check file size if present (2MB limit for base64 encoded data)
+      // Enhanced file validation if present
       if (validatedData.encryptedFile) {
-        const fileBuffer = Buffer.from(validatedData.encryptedFile, 'base64');
-        if (fileBuffer.length > 2 * 1024 * 1024) {
-          return res.status(413).json({ error: "File too large. Maximum size is 2MB." });
+        try {
+          const fileBuffer = Buffer.from(validatedData.encryptedFile, 'base64');
+          
+          // File size validation (2MB limit)
+          if (fileBuffer.length > 2 * 1024 * 1024) {
+            return res.status(413).json({ error: "File too large. Maximum size is 2MB." });
+          }
+          
+          // Basic file signature validation to prevent malicious uploads
+          const fileSignature = fileBuffer.slice(0, 8);
+          const isValidFileType = validateFileSignature(fileSignature);
+          
+          if (!isValidFileType) {
+            return res.status(400).json({ error: "Invalid or potentially malicious file type detected." });
+          }
+        } catch (error) {
+          return res.status(400).json({ error: "Invalid file data format." });
         }
       }
 

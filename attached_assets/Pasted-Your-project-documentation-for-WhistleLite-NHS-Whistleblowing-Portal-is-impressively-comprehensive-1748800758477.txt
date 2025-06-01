@@ -1,0 +1,77 @@
+Your project documentation for WhistleLite – NHS Whistleblowing Portal is impressively comprehensive and well-organised. Here’s a structured review across key domains:
+
+⸻
+
+✅ Overall Strengths
+
+🔐 Security & Privacy
+	•	End-to-end encryption using libsodium (sealed box) is a strong choice for whistleblowing use cases.
+	•	GDPR compliance is thoughtfully baked in, including:
+	•	90-day data retention
+	•	Anonymous submissions
+	•	Metadata stripping
+	•	Use of rate limiting and session-based authentication for the admin portal improves security posture.
+
+💻 Technical Stack
+	•	Clean, modern stack:
+	•	React + TypeScript + Vite frontend
+	•	Express + PostgreSQL + Drizzle ORM backend
+	•	Tailwind + shadcn/ui for design consistency and responsiveness
+	•	Good separation of concerns (client/server/shared directories).
+	•	Use of libsodium-wrappers on both frontend and backend ensures consistent encryption logic.
+
+🧱 Structure & Documentation
+	•	Directory layout is clearly documented and intuitive.
+	•	Installation instructions are minimal and clear.
+	•	Security configuration section is detailed and appropriate.
+	•	Use of hooks and modular component layout (hooks/use-toast, components/ui, etc.) indicates scalability.
+
+⸻
+
+⚠️ Recommendations & Weak Spots
+
+🔧 Backend Concerns
+	•	Password authentication only may be insufficient for an admin portal managing sensitive content. Consider MFA (even time-based OTP via email) or Yubikey support.
+	•	File uploads handled on backend: it’s not clear if antivirus scanning or MIME-type checking is enforced.
+	•	No mention of CSP headers or HTTPS requirements for deployment. For whistleblowing, security headers should be enforced (CSP, X-Content-Type-Options, etc.).
+
+📂 GDPR Compliance Risks
+	•	You mention 90-day data retention, but it’s unclear:
+	•	How this is enforced programmatically
+	•	Whether reporters can request erasure of submissions
+	•	File metadata stripping is referenced, but exact tools or methods (e.g. ExifTool, in-browser library) aren’t detailed.
+
+🧪 Testing & Deployment
+	•	There’s no mention of:
+	•	Unit or integration tests
+	•	Deployment strategy (e.g. Netlify for frontend + Fly.io/Vercel for backend? Docker? CI/CD?)
+	•	Monitoring/logging (which may raise GDPR implications)
+	•	Suggest adding a minimal test suite using Vitest or Jest.
+
+🔄 Admin Portal UX
+	•	Suggest clarifying:
+	•	Whether the admin dashboard can respond to submissions anonymously
+	•	If multiple admins can be configured
+	•	How encrypted messages are decrypted (client-side with key input? pre-shared admin key?)
+
+⸻
+
+✅ Quick Wins
+
+Area	Suggestion
+⚙️ Config	Add .env.example to repo with safe variable templates
+🔐 Security	Add MFA or at least 2FA support for the admin dashboard
+📤 Uploads	Explicitly sanitise file names + validate types before save
+🧾 Legal	Consider a privacy.md with plain-English GDPR commitments
+🧪 Testing	Create a /tests directory and stub out at least encryption and form submission logic
+📦 Distribution	Consider Dockerising for rapid deployment/testability
+
+
+⸻
+
+If you’d like, I can help you:
+	•	Write a privacy policy or terms of service for deployment
+	•	Build the .env.example and deployment workflow
+	•	Draft the file redaction and metadata-stripping logic
+
+Would you like a security checklist tailored for NHS deployment or ICO scrutiny? ￼
