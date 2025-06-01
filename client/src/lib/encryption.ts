@@ -39,16 +39,16 @@ export async function encryptData(data: string): Promise<string> {
   }
 
   try {
-    // Get the public key from environment or generate one for development
+    // Get the public key from server or environment
     let publicKeyBase64 = PUBLIC_KEY;
     
-    // If no public key is configured, generate a temporary one for development
+    // If no public key is configured, fetch from server
     if (!publicKeyBase64) {
-      const tempKeyPair = sodium!.crypto_box_keypair();
-      publicKeyBase64 = sodium!.to_base64(tempKeyPair.publicKey);
-      
-      // Store the private key for development decryption
-      sessionStorage.setItem('dev_private_key', sodium!.to_base64(tempKeyPair.privateKey));
+      try {
+        publicKeyBase64 = await fetchPublicKey();
+      } catch (error) {
+        throw new Error("Unable to obtain encryption public key");
+      }
     }
 
     // Convert base64 public key to Uint8Array

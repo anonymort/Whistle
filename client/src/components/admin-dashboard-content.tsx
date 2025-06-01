@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -100,6 +101,35 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
       decryptMutation.mutate(submission.encryptedMessage);
     }
   };
+
+  const { data: publicKey } = useQuery({
+    queryKey: ['/api/admin/public-key'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/public-key");
+      return response.json();
+    }
+  });
+
+  const rotateKeysMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/rotate-keys");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Keys Rotated",
+        description: "Encryption keys have been rotated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/public-key'] });
+    },
+    onError: () => {
+      toast({
+        title: "Key Rotation Failed",
+        description: "Unable to rotate encryption keys",
+        variant: "destructive",
+      });
+    },
+  });
 
   const formatDate = (date: Date) => {
     return format(date, "MMM dd, yyyy 'at' HH:mm");
@@ -202,15 +232,22 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
           </Card>
         </div>
 
-        {/* Submissions Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Submissions</CardTitle>
-            <CardDescription>
-              All submissions are encrypted and will be automatically deleted after 90 days
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        {/* Tabs for different admin functions */}
+        <Tabs defaultValue="submissions" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="submissions">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Submissions</CardTitle>
+                <CardDescription>
+                  All submissions are encrypted and will be automatically deleted after 90 days
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
             {isLoading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -348,8 +385,56 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                 </table>
               </div>
             )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="security">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Key className="w-5 h-5" />
+                    <span>Encryption Management</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Manage encryption keys and security settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Current Public Key:</label>
+                    <p className="text-xs font-mono bg-gray-100 p-2 rounded mt-1 break-all">
+                      {publicKey?.publicKey || 'Loading...'}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Button
+                      onClick={() => rotateKeysMutation.mutate()}
+                      disabled={rotateKeysMutation.isPending}
+                      variant="outline"
+                      className="flex items-center space-x-2"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span>{rotateKeysMutation.isPending ? 'Rotating...' : 'Rotate Keys'}</span>
+                    </Button>
+                  </div>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-center space-x-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                      <span className="text-sm font-medium text-yellow-800">Key Rotation Warning</span>
+                    </div>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Rotating keys will invalidate all existing encrypted submissions. Only rotate if necessary for security.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
