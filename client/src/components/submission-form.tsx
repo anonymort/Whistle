@@ -48,32 +48,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (data: {
-      encryptedMessage: string;
-      encryptedFile: string | null;
-      replyEmail: string;
-      sha256Hash: string;
-    }) => {
-      const response = await apiRequest("POST", "/api/submit", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      form.reset();
-      setSelectedFile(null);
-      setEncryptedFile(null);
-      onSuccess();
-    },
-    onError: (error) => {
-      toast({
-        title: "Submission Failed",
-        description: error.message || "Please try again later",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const onSubmit = async (data: SubmissionFormData) => {
-    try {
+    mutationFn: async (data: SubmissionFormData) => {
       // Encrypt the message
       const encryptedMessage = await encryptData(data.message);
       
@@ -81,18 +56,35 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
       const payload = {
         encryptedMessage,
         encryptedFile,
-        replyEmail: data.replyEmail || "",
+        replyEmail: data.replyEmail || null,
         sha256Hash: "", // Will be generated on server
       };
 
-      submitMutation.mutate(payload);
-    } catch (error) {
+      const response = await apiRequest("POST", "/api/submit", payload);
+      return response.json();
+    },
+    onSuccess: () => {
       toast({
-        title: "Encryption Failed",
-        description: "Unable to encrypt your submission. Please try again.",
+        title: "Submission Successful",
+        description: "Your report has been securely submitted and encrypted.",
+      });
+      form.reset();
+      setSelectedFile(null);
+      setEncryptedFile(null);
+      onSuccess();
+    },
+    onError: (error) => {
+      console.error("Submission error:", error);
+      toast({
+        title: "Submission Failed",
+        description: error instanceof Error ? error.message : "Please try again later.",
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  const onSubmit = (data: SubmissionFormData) => {
+    submitMutation.mutate(data);
   };
 
   const handleFileProcessed = (file: File, encryptedData: string) => {
