@@ -68,22 +68,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhanced file validation if present
       if (validatedData.encryptedFile) {
         try {
-          const fileBuffer = Buffer.from(validatedData.encryptedFile, 'base64');
+          // Parse the encrypted file data to get original size
+          const encryptedData = JSON.parse(validatedData.encryptedFile);
+          const fileBuffer = Buffer.from(encryptedData.data, 'base64');
           
-          // File size validation (2MB limit)
-          if (fileBuffer.length > 2 * 1024 * 1024) {
+          // Estimate original file size (encrypted data is larger than original)
+          // libsodium sealed box adds ~48 bytes overhead, base64 adds ~33%
+          const estimatedOriginalSize = (fileBuffer.length * 0.75) - 100; // Conservative estimate
+          
+          // File size validation (2MB limit for original file)
+          if (estimatedOriginalSize > 2 * 1024 * 1024) {
             return res.status(413).json({ error: "File too large. Maximum size is 2MB." });
           }
           
-          // Basic file signature validation to prevent malicious uploads
-          const fileSignature = fileBuffer.slice(0, 8);
-          const isValidFileType = validateFileSignature(fileSignature);
-          
-          if (!isValidFileType) {
-            return res.status(400).json({ error: "Invalid or potentially malicious file type detected." });
+          // For very large encrypted payloads, reject regardless
+          if (fileBuffer.length > 4 * 1024 * 1024) {
+            return res.status(413).json({ error: "Encrypted file data too large." });
           }
+          
         } catch (error) {
-          return res.status(400).json({ error: "Invalid file data format." });
+          return res.status(400).json({ error: "Invalid encrypted file format." });
         }
       }
 

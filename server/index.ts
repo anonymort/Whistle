@@ -4,6 +4,9 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
+// Configure trust proxy for rate limiting behind reverse proxies
+app.set('trust proxy', 1);
+
 // Security headers for production
 if (process.env.NODE_ENV === "production") {
   app.use((req, res, next) => {
