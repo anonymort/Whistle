@@ -70,7 +70,7 @@ export async function encryptData(data: string): Promise<string> {
       checksum: sodium!.to_base64(sodium!.crypto_generichash(32, messageBytes))
     };
     
-    return btoa(JSON.stringify(encryptedData));
+    return JSON.stringify(encryptedData);
   } catch (error) {
     console.error("Encryption failed:", error);
     throw new Error("Failed to encrypt data");
