@@ -14,8 +14,14 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { encryptData } from "@/lib/encryption";
 import FileUpload from "@/components/file-upload";
+import HospitalSelector from "@/components/hospital-selector";
+import { NHS_HOSPITALS } from "@/data/nhs-hospitals";
 
 const submissionSchema = z.object({
+  hospital: z.string().min(1, "Please select your NHS hospital/trust").refine(
+    (val) => NHS_HOSPITALS.includes(val as any),
+    "Please select a valid NHS hospital from the list"
+  ),
   message: z.string().min(10, "Message must be at least 10 characters").max(5000, "Message must be less than 5000 characters"),
   replyEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
   consentSubmission: z.boolean().refine((val) => val === true, {
@@ -40,6 +46,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
   const form = useForm<SubmissionFormData>({
     resolver: zodResolver(submissionSchema),
     defaultValues: {
+      hospital: "",
       message: "",
       replyEmail: "",
       consentSubmission: false,
