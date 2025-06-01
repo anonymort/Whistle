@@ -52,7 +52,8 @@ export default function AdminDashboard() {
         ...s,
         submittedAt: new Date(s.submittedAt)
       }));
-    }
+    },
+    enabled: isAuthenticated,
   });
 
   const { data: stats } = useQuery({
@@ -60,7 +61,8 @@ export default function AdminDashboard() {
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/admin/stats");
       return response.json();
-    }
+    },
+    enabled: isAuthenticated,
   });
 
   const purgeMutation = useMutation({
