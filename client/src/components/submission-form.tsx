@@ -48,18 +48,12 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (data: SubmissionFormData) => {
-      // Encrypt the message
-      const encryptedMessage = await encryptData(data.message);
-      
-      // Create submission payload
-      const payload = {
-        encryptedMessage,
-        encryptedFile,
-        replyEmail: data.replyEmail || null,
-        sha256Hash: "", // Will be generated on server
-      };
-
+    mutationFn: async (payload: {
+      encryptedMessage: string;
+      encryptedFile: string | null;
+      replyEmail: string | null;
+      sha256Hash: string;
+    }) => {
       const response = await apiRequest("POST", "/api/submit", payload);
       return response.json();
     },
@@ -83,8 +77,27 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
     },
   });
 
-  const onSubmit = (data: SubmissionFormData) => {
-    submitMutation.mutate(data);
+  const onSubmit = async (data: SubmissionFormData) => {
+    try {
+      // Encrypt the message
+      const encryptedMessage = await encryptData(data.message);
+      
+      // Create submission payload
+      const payload = {
+        encryptedMessage,
+        encryptedFile,
+        replyEmail: data.replyEmail || null,
+        sha256Hash: "", // Will be generated on server
+      };
+
+      submitMutation.mutate(payload);
+    } catch (error) {
+      toast({
+        title: "Encryption Failed",
+        description: "Unable to encrypt your submission. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFileProcessed = (file: File, encryptedData: string) => {
