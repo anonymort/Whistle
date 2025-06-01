@@ -37,6 +37,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize encryption system
+  const { initializeServerEncryption } = await import("./encryption");
+  const encryptionInitialized = await initializeServerEncryption();
+  if (!encryptionInitialized) {
+    console.error("Failed to initialize encryption system");
+    process.exit(1);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

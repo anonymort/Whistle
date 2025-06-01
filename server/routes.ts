@@ -170,24 +170,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No encrypted data provided" });
       }
       
-      // Handle the mock encryption format used in development
-      if (encryptedData.startsWith('eyJ')) {
-        try {
-          const decoded = JSON.parse(atob(encryptedData));
-          if (decoded.algorithm === "development-mock-encryption") {
-            const decryptedText = atob(decoded.data);
-            res.json({ decryptedText });
-            return;
-          }
-        } catch (e) {
-          // Fall through to error handling
-        }
-      }
+      // Use the new encryption system
+      const { decryptData } = await import("./encryption");
+      const decryptedText = await decryptData(encryptedData);
       
-      res.status(400).json({ error: "Unable to decrypt data" });
+      res.json({ decryptedText });
     } catch (error) {
       console.error("Decryption error:", error);
       res.status(500).json({ error: "Decryption failed" });
+    }
+  });
+
+  // Get admin public key for client encryption
+  app.get("/api/admin/public-key", async (req, res) => {
+    try {
+      const { getAdminPublicKey } = await import("./encryption");
+      const publicKey = getAdminPublicKey();
+      
+      if (!publicKey) {
+        return res.status(500).json({ error: "Public key not available" });
+      }
+      
+      res.json({ publicKey });
+    } catch (error) {
+      console.error("Public key retrieval error:", error);
+      res.status(500).json({ error: "Failed to get public key" });
+    }
+  });
+
+  // Rotate admin keys (security endpoint)
+  app.post("/api/admin/rotate-keys", async (req, res) => {
+    try {
+      const { rotateAdminKeys } = await import("./encryption");
+      const newKeys = await rotateAdminKeys();
+      
+      res.json({ 
+        message: "Keys rotated successfully",
+        publicKey: newKeys.encryptionKeys.publicKey
+      });
+    } catch (error) {
+      console.error("Key rotation error:", error);
+      res.status(500).json({ error: "Key rotation failed" });
     }
   });
 
