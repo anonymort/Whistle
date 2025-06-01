@@ -126,7 +126,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {submissions.filter(s => s.encryptedFile).length}
+                {submissions.filter((s: Submission) => s.encryptedFile).length}
               </div>
             </CardContent>
           </Card>
@@ -138,7 +138,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {submissions.filter(s => s.replyEmail).length}
+                {submissions.filter((s: Submission) => s.replyEmail).length}
               </div>
             </CardContent>
           </Card>
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {submissions.filter(s => calculateDaysRemaining(s.submittedAt) <= 7).length}
+                {submissions.filter((s: Submission) => calculateDaysRemaining(s.submittedAt) <= 7).length}
               </div>
             </CardContent>
           </Card>
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {submissions.map((submission) => {
+                    {submissions.map((submission: Submission) => {
                       const daysRemaining = calculateDaysRemaining(submission.submittedAt);
                       return (
                         <tr key={submission.id} className="border-b hover:bg-gray-50">

@@ -84,6 +84,7 @@ export default function WhistleblowingPortal() {
             <a href="#" className="hover:text-primary">Privacy Policy</a>
             <a href="#" className="hover:text-primary">Terms of Service</a>
             <a href="#" className="hover:text-primary">Contact Support</a>
+            <a href="/admin" className="hover:text-primary">Admin Dashboard</a>
           </div>
         </footer>
       </main>
