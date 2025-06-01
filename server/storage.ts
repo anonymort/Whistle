@@ -1,33 +1,21 @@
 import { submissions, type Submission, type InsertSubmission } from "@shared/schema";
-import crypto from "crypto";
+import { db } from "./db";
+import { eq, lt } from "drizzle-orm";
 
 export interface IStorage {
   createSubmission(submission: InsertSubmission): Promise<Submission>;
   purgeOldSubmissions(): Promise<number>;
   getSubmissionCount(): Promise<number>;
+  getAllSubmissions(): Promise<Submission[]>;
+  getSubmissionById(id: number): Promise<Submission | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private submissions: Map<number, Submission>;
-  private currentId: number;
-
-  constructor() {
-    this.submissions = new Map();
-    this.currentId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async createSubmission(insertSubmission: InsertSubmission): Promise<Submission> {
-    const id = this.currentId++;
-    const submission: Submission = {
-      id,
-      encryptedMessage: insertSubmission.encryptedMessage,
-      encryptedFile: insertSubmission.encryptedFile || null,
-      replyEmail: insertSubmission.replyEmail || null,
-      sha256Hash: insertSubmission.sha256Hash,
-      submittedAt: new Date(),
-    };
-    
-    this.submissions.set(id, submission);
+    const [submission] = await db
+      .insert(submissions)
+      .values(insertSubmission)
+      .returning();
     return submission;
   }
 
@@ -35,26 +23,29 @@ export class MemStorage implements IStorage {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     
-    let purgedCount = 0;
-    const idsToDelete: number[] = [];
+    const result = await db
+      .delete(submissions)
+      .where(lt(submissions.submittedAt, ninetyDaysAgo));
     
-    this.submissions.forEach((submission, id) => {
-      if (submission.submittedAt < ninetyDaysAgo) {
-        idsToDelete.push(id);
-      }
-    });
-    
-    idsToDelete.forEach(id => {
-      this.submissions.delete(id);
-      purgedCount++;
-    });
-    
-    return purgedCount;
+    return result.rowCount || 0;
   }
 
   async getSubmissionCount(): Promise<number> {
-    return this.submissions.size;
+    const result = await db.select().from(submissions);
+    return result.length;
+  }
+
+  async getAllSubmissions(): Promise<Submission[]> {
+    return await db.select().from(submissions);
+  }
+
+  async getSubmissionById(id: number): Promise<Submission | undefined> {
+    const [submission] = await db
+      .select()
+      .from(submissions)
+      .where(eq(submissions.id, id));
+    return submission || undefined;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

@@ -107,6 +107,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoints
+  app.get("/api/admin/submissions", async (req, res) => {
+    try {
+      const submissions = await storage.getAllSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      console.error("Admin submissions error:", error);
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const submissionCount = await storage.getSubmissionCount();
+      res.json({ submissionCount });
+    } catch (error) {
+      console.error("Admin stats error:", error);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  app.get("/api/admin/submission/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const submission = await storage.getSubmissionById(id);
+      
+      if (!submission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+      
+      res.json(submission);
+    } catch (error) {
+      console.error("Admin submission detail error:", error);
+      res.status(500).json({ error: "Failed to fetch submission" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
