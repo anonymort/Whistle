@@ -22,13 +22,10 @@ interface Submission {
 
 export default function AdminDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('admin_authenticated') === 'true';
+  });
   const { toast } = useToast();
-
-  useEffect(() => {
-    const authStatus = sessionStorage.getItem('admin_authenticated');
-    setIsAuthenticated(authStatus === 'true');
-  }, []);
 
   const handleLogout = () => {
     sessionStorage.removeItem('admin_authenticated');
@@ -39,9 +36,9 @@ export default function AdminDashboard() {
     });
   };
 
-  if (!isAuthenticated) {
-    return <AdminLogin onLoginSuccess={() => setIsAuthenticated(true)} />;
-  }
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
 
   const { data: submissions = [], isLoading, refetch } = useQuery({
     queryKey: ['/api/admin/submissions'],
@@ -64,6 +61,10 @@ export default function AdminDashboard() {
     },
     enabled: isAuthenticated,
   });
+
+  if (!isAuthenticated) {
+    return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
+  }
 
   const purgeMutation = useMutation({
     mutationFn: async () => {
