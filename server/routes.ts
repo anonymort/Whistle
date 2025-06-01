@@ -233,6 +233,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin file download endpoint
+  app.get("/api/admin/download/:submissionId", async (req, res) => {
+    try {
+      const submissionId = parseInt(req.params.submissionId);
+      const submission = await storage.getSubmissionById(submissionId);
+      
+      if (!submission || !submission.encryptedFile) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      // Decrypt the file
+      const { decryptData } = await import("./encryption");
+      const decryptedFileData = await decryptData(submission.encryptedFile);
+      
+      // Parse the file data (it should contain filename, mimetype, and data)
+      const fileInfo = JSON.parse(decryptedFileData);
+      const fileBuffer = Buffer.from(fileInfo.data, 'base64');
+      
+      // Set appropriate headers for download
+      res.setHeader('Content-Disposition', `attachment; filename="${fileInfo.filename || 'attachment'}"`);
+      res.setHeader('Content-Type', fileInfo.mimetype || 'application/octet-stream');
+      res.setHeader('Content-Length', fileBuffer.length);
+      
+      res.send(fileBuffer);
+    } catch (error) {
+      console.error("Download error:", error);
+      res.status(500).json({ error: "Download failed" });
+    }
+  });
+
   // Get admin public key for client encryption
   app.get("/api/admin/public-key", async (req, res) => {
     try {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -352,10 +352,21 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                   </div>
                                   {submission.encryptedFile && (
                                     <div>
-                                      <label className="text-sm font-medium text-gray-700">Encrypted File:</label>
-                                      <p className="text-xs text-gray-500 bg-gray-100 p-2 rounded mt-1">
-                                        File attached (encrypted, {submission.encryptedFile.length} characters)
-                                      </p>
+                                      <label className="text-sm font-medium text-gray-700">Attached File:</label>
+                                      <div className="flex items-center space-x-2 mt-1">
+                                        <p className="text-xs text-gray-500 bg-gray-100 p-2 rounded flex-1">
+                                          File attached ({submission.encryptedFile.length} characters)
+                                        </p>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => window.open(`/api/admin/download/${submission.id}`, '_blank')}
+                                          className="text-xs"
+                                        >
+                                          <Download className="w-3 h-3 mr-1" />
+                                          Download
+                                        </Button>
+                                      </div>
                                     </div>
                                   )}
                                   {submission.replyEmail && (

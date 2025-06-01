@@ -73,10 +73,15 @@ export async function decryptData(encryptedDataString: string): Promise<string> 
     // Parse the encrypted data structure
     let encryptedData;
     try {
-      encryptedData = JSON.parse(atob(encryptedDataString));
+      // Try direct JSON first (new format)
+      encryptedData = JSON.parse(encryptedDataString);
     } catch (e) {
-      // Handle legacy format or direct base64
-      throw new Error("Invalid encrypted data format");
+      // Try base64-encoded JSON (legacy format)
+      try {
+        encryptedData = JSON.parse(atob(encryptedDataString));
+      } catch (e2) {
+        throw new Error("Invalid encrypted data format");
+      }
     }
 
     // Handle different encryption algorithms
