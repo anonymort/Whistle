@@ -1,7 +1,7 @@
 // Mock encryption using libsodium (in a real implementation, this would use actual libsodium)
 // For demonstration purposes, we'll use a simple base64 encoding with a mock encryption wrapper
 
-export const PUBLIC_KEY = process.env.VITE_PUBLIC_KEY || "mock-public-key-for-development";
+export const PUBLIC_KEY = import.meta.env.VITE_PUBLIC_KEY || "mock-public-key-for-development";
 
 export async function encryptData(data: string): Promise<string> {
   try {

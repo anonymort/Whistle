@@ -19,8 +19,11 @@ export class MemStorage implements IStorage {
   async createSubmission(insertSubmission: InsertSubmission): Promise<Submission> {
     const id = this.currentId++;
     const submission: Submission = {
-      ...insertSubmission,
       id,
+      encryptedMessage: insertSubmission.encryptedMessage,
+      encryptedFile: insertSubmission.encryptedFile || null,
+      replyEmail: insertSubmission.replyEmail || null,
+      sha256Hash: insertSubmission.sha256Hash,
       submittedAt: new Date(),
     };
     
@@ -33,12 +36,18 @@ export class MemStorage implements IStorage {
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     
     let purgedCount = 0;
-    for (const [id, submission] of this.submissions.entries()) {
+    const idsToDelete: number[] = [];
+    
+    this.submissions.forEach((submission, id) => {
       if (submission.submittedAt < ninetyDaysAgo) {
-        this.submissions.delete(id);
-        purgedCount++;
+        idsToDelete.push(id);
       }
-    }
+    });
+    
+    idsToDelete.forEach(id => {
+      this.submissions.delete(id);
+      purgedCount++;
+    });
     
     return purgedCount;
   }
