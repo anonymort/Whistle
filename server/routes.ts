@@ -161,6 +161,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Decrypt submission content for admin
+  app.post("/api/admin/decrypt", async (req, res) => {
+    try {
+      const { encryptedData } = req.body;
+      
+      if (!encryptedData) {
+        return res.status(400).json({ error: "No encrypted data provided" });
+      }
+      
+      // Handle the mock encryption format used in development
+      if (encryptedData.startsWith('eyJ')) {
+        try {
+          const decoded = JSON.parse(atob(encryptedData));
+          if (decoded.algorithm === "development-mock-encryption") {
+            const decryptedText = atob(decoded.data);
+            res.json({ decryptedText });
+            return;
+          }
+        } catch (e) {
+          // Fall through to error handling
+        }
+      }
+      
+      res.status(400).json({ error: "Unable to decrypt data" });
+    } catch (error) {
+      console.error("Decryption error:", error);
+      res.status(500).json({ error: "Decryption failed" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

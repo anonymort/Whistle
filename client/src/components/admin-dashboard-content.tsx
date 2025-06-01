@@ -24,6 +24,7 @@ interface AdminDashboardContentProps {
 
 export default function AdminDashboardContent({ onLogout }: AdminDashboardContentProps) {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [decryptedContent, setDecryptedContent] = useState<{[key: number]: string}>({});
   const { toast } = useToast();
 
   const { data: submissions = [], isLoading, refetch } = useQuery({
@@ -67,6 +68,38 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
       });
     }
   });
+
+  const decryptMutation = useMutation({
+    mutationFn: async (encryptedData: string) => {
+      const response = await apiRequest("POST", "/api/admin/decrypt", {
+        encryptedData
+      });
+      return response.json();
+    },
+    onSuccess: (data, encryptedData) => {
+      // Find the submission ID that matches this encrypted data
+      const submission = submissions.find(s => s.encryptedMessage === encryptedData);
+      if (submission) {
+        setDecryptedContent(prev => ({
+          ...prev,
+          [submission.id]: data.decryptedText
+        }));
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Decryption Failed",
+        description: "Unable to decrypt submission content",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDecrypt = (submission: Submission) => {
+    if (!decryptedContent[submission.id]) {
+      decryptMutation.mutate(submission.encryptedMessage);
+    }
+  };
 
   const formatDate = (date: Date) => {
     return format(date, "MMM dd, yyyy 'at' HH:mm");
@@ -259,10 +292,26 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                     </p>
                                   </div>
                                   <div>
-                                    <label className="text-sm font-medium text-gray-700">Encrypted Message:</label>
-                                    <p className="text-xs font-mono bg-gray-100 p-2 rounded mt-1 break-all max-h-32 overflow-y-auto">
-                                      {submission.encryptedMessage.substring(0, 200)}...
-                                    </p>
+                                    <label className="text-sm font-medium text-gray-700">Message Content:</label>
+                                    {decryptedContent[submission.id] ? (
+                                      <div className="bg-green-50 border border-green-200 rounded mt-1 p-3">
+                                        <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                                          {decryptedContent[submission.id]}
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <div className="bg-gray-50 border border-gray-200 rounded mt-1 p-3">
+                                        <p className="text-xs text-gray-500 mb-2">Content is encrypted</p>
+                                        <Button
+                                          onClick={() => handleDecrypt(submission)}
+                                          disabled={decryptMutation.isPending}
+                                          size="sm"
+                                          className="bg-blue-600 hover:bg-blue-700"
+                                        >
+                                          {decryptMutation.isPending ? "Decrypting..." : "Decrypt Content"}
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                   {submission.encryptedFile && (
                                     <div>
