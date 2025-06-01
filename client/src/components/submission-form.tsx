@@ -182,8 +182,8 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                    checked={field.value || false}
+                    onCheckedChange={(checked) => field.onChange(checked === true)}
                     className="mt-1"
                   />
                 </FormControl>
@@ -204,8 +204,8 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                    checked={field.value || false}
+                    onCheckedChange={(checked) => field.onChange(checked === true)}
                     className="mt-1"
                   />
                 </FormControl>

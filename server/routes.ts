@@ -107,6 +107,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin authentication
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { password } = req.body;
+      const adminPassword = process.env.ADMIN_PASSWORD || "admin123"; // Default for development
+      
+      if (password === adminPassword) {
+        res.json({ success: true, message: "Login successful" });
+      } else {
+        res.status(401).json({ error: "Invalid password" });
+      }
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
   // Admin endpoints
   app.get("/api/admin/submissions", async (req, res) => {
     try {

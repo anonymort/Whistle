@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Users, FileText, Trash2, Eye, Calendar, Clock, AlertTriangle } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Eye, Calendar, Clock, AlertTriangle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
+import AdminLogin from "@/components/admin-login";
 
 interface Submission {
   id: number;
@@ -21,7 +22,26 @@ interface Submission {
 
 export default function AdminDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const authStatus = sessionStorage.getItem('admin_authenticated');
+    setIsAuthenticated(authStatus === 'true');
+  }, []);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_authenticated');
+    setIsAuthenticated(false);
+    toast({
+      title: "Logged Out",
+      description: "You have been logged out of the admin dashboard",
+    });
+  };
+
+  if (!isAuthenticated) {
+    return <AdminLogin onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   const { data: submissions = [], isLoading, refetch } = useQuery({
     queryKey: ['/api/admin/submissions'],
@@ -93,15 +113,25 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-600">NHS Whistleblowing Portal Management</p>
               </div>
             </div>
-            <Button
-              onClick={() => purgeMutation.mutate()}
-              disabled={purgeMutation.isPending}
-              variant="outline"
-              className="flex items-center space-x-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Purge Old Data</span>
-            </Button>
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={() => purgeMutation.mutate()}
+                disabled={purgeMutation.isPending}
+                variant="outline"
+                className="flex items-center space-x-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Purge Old Data</span>
+              </Button>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="flex items-center space-x-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
