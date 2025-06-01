@@ -44,7 +44,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
       consentSubmission: false,
       consentGdpr: false,
     },
-    mode: "onChange",
+    mode: "onBlur",
   });
 
   const submitMutation = useMutation({
@@ -193,9 +193,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
-                    onCheckedChange={(checked) => {
-                      setTimeout(() => field.onChange(checked), 0);
-                    }}
+                    onCheckedChange={field.onChange}
                     className="mt-1"
                   />
                 </FormControl>
@@ -217,9 +215,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
-                    onCheckedChange={(checked) => {
-                      setTimeout(() => field.onChange(checked), 0);
-                    }}
+                    onCheckedChange={field.onChange}
                     className="mt-1"
                   />
                 </FormControl>
