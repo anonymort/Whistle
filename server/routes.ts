@@ -145,31 +145,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhanced file validation if present
       if (validatedData.encryptedFile) {
         try {
-          // Parse the encrypted file data
-          const encryptedData = JSON.parse(validatedData.encryptedFile);
+          // Parse the file data (now unencrypted, just metadata-stripped)
+          const fileData = JSON.parse(validatedData.encryptedFile);
           
-          // Validate the encrypted data structure
-          if (!encryptedData.data || !encryptedData.algorithm) {
-            res.status(400).json({ error: "Invalid encrypted file structure." });
+          // Validate the file data structure
+          if (!fileData.data || !fileData.filename || !fileData.mimetype) {
+            res.status(400).json({ error: "Invalid file structure." });
             return;
           }
           
-          const fileBuffer = Buffer.from(encryptedData.data, 'base64');
+          const fileBuffer = Buffer.from(fileData.data, 'base64');
           
-          // For very large encrypted payloads, reject regardless (4MB limit)
+          // For very large files, reject (4MB limit)
           if (fileBuffer.length > 4 * 1024 * 1024) {
-            res.status(413).json({ error: "Encrypted file data too large." });
+            res.status(413).json({ error: "File data too large." });
             return;
           }
           
-          // Note: File signature validation is skipped for encrypted files
-          // Client-side validation ensures only permitted file types are encrypted
+          // Validate file type based on mimetype
+          const allowedTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/jpg', 
+            'image/png',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          ];
+          
+          if (!allowedTypes.includes(fileData.mimetype)) {
+            res.status(400).json({ error: "Unsupported file type." });
+            return;
+          }
 
           // Perform comprehensive virus scanning
           try {
             const virusScanResult = await virusScanner.scanFile(
               fileBuffer, 
-              `encrypted_file_${Date.now()}`, 
+              fileData.filename, 
               'anonymous_user'
             );
 
@@ -474,15 +485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "File not found" });
       }
 
-      // Decrypt the file
-      const { decryptData } = await import("./encryption");
-      const decryptedFileData = await decryptData(submission.encryptedFile);
-      
-      console.log("Decrypted file data length:", decryptedFileData.length);
-      console.log("Decrypted data preview:", decryptedFileData.substring(0, 200));
-      
-      // Parse the file info JSON
-      const fileInfo = JSON.parse(decryptedFileData);
+      // Parse the file data directly (no decryption needed - HTTPS provides encryption)
+      const fileInfo = JSON.parse(submission.encryptedFile);
       console.log("File info:", {
         filename: fileInfo.filename,
         mimetype: fileInfo.mimetype,

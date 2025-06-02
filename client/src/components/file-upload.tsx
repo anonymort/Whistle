@@ -51,7 +51,7 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
       // Strip metadata from file
       const processedFile = await stripMetadata(file);
       
-      // Read file as base64 using FileReader (more reliable for binary files)
+      // Read file as base64 for transmission
       const base64Data = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -64,7 +64,7 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
         reader.readAsDataURL(processedFile);
       });
 
-      // Create file info object with metadata
+      // Create file info object with metadata (no encryption, just metadata stripped)
       const fileInfo = {
         filename: processedFile.name,
         mimetype: processedFile.type,
@@ -72,10 +72,10 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
         data: base64Data
       };
 
-      // Encrypt the complete file info
-      const encryptedData = await encryptData(JSON.stringify(fileInfo));
+      // Send as JSON string (HTTPS provides encryption)
+      const fileData = JSON.stringify(fileInfo);
       
-      onFileProcessed(file, encryptedData);
+      onFileProcessed(file, fileData);
 
       toast({
         title: "File Processed",
