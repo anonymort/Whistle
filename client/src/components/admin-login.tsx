@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -28,6 +29,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
+      username: "",
       password: "",
     },
   });
@@ -67,7 +69,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
           </div>
           <CardTitle className="text-2xl">Admin Access</CardTitle>
           <CardDescription>
-            Enter the admin password to access the WhistleLite management dashboard
+            Enter your admin credentials to access the WhistleLite management dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -75,10 +77,28 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="text"
+                        placeholder="Enter admin username"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Admin Password</FormLabel>
+                    <FormLabel>Password</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
