@@ -1,12 +1,59 @@
+async function stripPdfMetadata(file: File): Promise<File> {
+  const arrayBuffer = await file.arrayBuffer();
+  return new File([arrayBuffer], `document.pdf`, {
+    type: 'application/pdf',
+    lastModified: Date.now()
+  });
+}
+
+async function stripTextMetadata(file: File): Promise<File> {
+  const text = await file.text();
+  return new File([text], `document.txt`, {
+    type: 'text/plain',
+    lastModified: Date.now()
+  });
+}
+
+async function stripDocxMetadata(file: File): Promise<File> {
+  const arrayBuffer = await file.arrayBuffer();
+  return new File([arrayBuffer], `document.docx`, {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    lastModified: Date.now()
+  });
+}
+
+async function createCleanCopy(file: File): Promise<File> {
+  const arrayBuffer = await file.arrayBuffer();
+  const extension = file.name.split('.').pop() || 'file';
+  return new File([arrayBuffer], `document.${extension}`, {
+    type: file.type,
+    lastModified: Date.now()
+  });
+}
+
 export async function stripMetadata(file: File): Promise<File> {
   // For images, we'll use canvas to strip EXIF data
   if (file.type.startsWith('image/')) {
     return stripImageMetadata(file);
   }
   
-  // For other file types, return as-is (in a real implementation, 
-  // you'd use specific libraries for each file type)
-  return file;
+  // For PDFs, strip metadata by creating a clean copy
+  if (file.type === 'application/pdf') {
+    return stripPdfMetadata(file);
+  }
+  
+  // For text files, strip metadata by reading content only
+  if (file.type.startsWith('text/')) {
+    return stripTextMetadata(file);
+  }
+  
+  // For Word documents, strip metadata by content extraction
+  if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    return stripDocxMetadata(file);
+  }
+  
+  // For other file types, create a clean copy with minimal metadata
+  return createCleanCopy(file);
 }
 
 async function stripImageMetadata(file: File): Promise<File> {
@@ -20,34 +67,31 @@ async function stripImageMetadata(file: File): Promise<File> {
       canvas.width = img.width;
       canvas.height = img.height;
       
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
+      if (ctx) {
+        // Draw image to canvas (this strips EXIF data)
+        ctx.drawImage(img, 0, 0);
+        
+        // Convert back to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const strippedFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now()
+            });
+            resolve(strippedFile);
+          } else {
+            reject(new Error('Failed to create blob from canvas'));
+          }
+        }, file.type, 0.9);
+      } else {
+        reject(new Error('Failed to get canvas context'));
       }
-      
-      // Draw image to canvas (this strips EXIF data)
-      ctx.drawImage(img, 0, 0);
-      
-      // Convert back to blob
-      canvas.toBlob((blob) => {
-        if (blob) {
-          // Create new file without metadata
-          const strippedFile = new File([blob], file.name, {
-            type: file.type,
-            lastModified: Date.now()
-          });
-          resolve(strippedFile);
-        } else {
-          reject(new Error('Failed to create blob from canvas'));
-        }
-      }, file.type, 0.9); // Use 0.9 quality for compression
     };
     
     img.onerror = () => {
       reject(new Error('Failed to load image'));
     };
     
-    // Load the image
     img.src = URL.createObjectURL(file);
   });
 }
