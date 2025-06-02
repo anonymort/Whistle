@@ -56,9 +56,33 @@ export default function AccessibilitySettings({
       speechSynthesis.cancel();
     }
 
-    // Announce the change
+    // Announce the change and read page content
     if (speechSynthesis && enabled) {
-      const utterance = new SpeechSynthesisUtterance("Voice assistance enabled. Page content will now be read aloud.");
+      const utterance = new SpeechSynthesisUtterance("Voice assistance enabled. I will now read the page content for you.");
+      utterance.rate = 0.8;
+      utterance.volume = 0.7;
+      speechSynthesis.speak(utterance);
+      
+      // Read page content after announcement
+      setTimeout(() => {
+        readPageContent();
+      }, 3000);
+    }
+  };
+
+  const readPageContent = () => {
+    if (speechSynthesis && voiceEnabled) {
+      const content = [
+        "NHS WhistleLite Anonymous Reporting Portal.",
+        "This is a secure platform for reporting safety concerns confidentially.",
+        "Your submission will be encrypted and automatically deleted after 90 days.",
+        "To submit a report, fill out the form below with your hospital, incident details, and description.",
+        "All fields marked as required must be completed.",
+        "You can optionally provide an email address if you want to receive updates.",
+        "File attachments are supported for evidence."
+      ].join(" ");
+      
+      const utterance = new SpeechSynthesisUtterance(content);
       utterance.rate = 0.8;
       utterance.volume = 0.7;
       speechSynthesis.speak(utterance);
@@ -69,10 +93,19 @@ export default function AccessibilitySettings({
     setHighContrastEnabled(enabled);
     localStorage.setItem('accessibility-high-contrast', enabled.toString());
     
+    // Force DOM update by toggling the class
     if (enabled) {
       document.documentElement.classList.add('high-contrast');
+      // Force a repaint
+      document.body.style.display = 'none';
+      document.body.offsetHeight; // trigger reflow
+      document.body.style.display = '';
     } else {
       document.documentElement.classList.remove('high-contrast');
+      // Force a repaint
+      document.body.style.display = 'none';
+      document.body.offsetHeight; // trigger reflow
+      document.body.style.display = '';
     }
 
     if (onHighContrastToggle) {
@@ -82,7 +115,7 @@ export default function AccessibilitySettings({
     // Announce the change if voice is enabled
     if (speechSynthesis && voiceEnabled) {
       const utterance = new SpeechSynthesisUtterance(
-        enabled ? "High contrast mode enabled" : "High contrast mode disabled"
+        enabled ? "High contrast mode enabled. The page now uses high contrast colors for better visibility." : "High contrast mode disabled. The page has returned to normal colors."
       );
       utterance.rate = 0.8;
       utterance.volume = 0.7;

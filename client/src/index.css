@@ -232,3 +232,50 @@
     @apply min-h-[44px] min-w-[44px];
   }
 }
+
+/* High Contrast Accessibility Mode */
+.high-contrast {
+  --background: 0 0% 0% !important;
+  --foreground: 0 0% 100% !important;
+  --muted: 0 0% 20% !important;
+  --muted-foreground: 0 0% 80% !important;
+  --popover: 0 0% 10% !important;
+  --popover-foreground: 0 0% 95% !important;
+  --card: 0 0% 5% !important;
+  --card-foreground: 0 0% 95% !important;
+  --border: 0 0% 30% !important;
+  --input: 0 0% 15% !important;
+  --primary: 210 100% 70% !important;
+  --primary-foreground: 0 0% 0% !important;
+  --secondary: 0 0% 20% !important;
+  --secondary-foreground: 0 0% 90% !important;
+  --accent: 0 0% 25% !important;
+  --accent-foreground: 0 0% 95% !important;
+  --destructive: 0 100% 60% !important;
+  --destructive-foreground: 0 0% 100% !important;
+  --ring: 210 100% 70% !important;
+}
+
+.high-contrast,
+.high-contrast * {
+  border-color: hsl(var(--border)) !important;
+}
+
+.high-contrast .bg-white,
+.high-contrast .bg-bg-soft,
+.high-contrast .bg-gray-50 {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.high-contrast .text-gray-600,
+.high-contrast .text-gray-500,
+.high-contrast .text-gray-900,
+.high-contrast .text-muted-foreground {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.high-contrast .shadow-sm,
+.high-contrast .shadow-lg {
+  box-shadow: 0 0 0 2px hsl(var(--border)) !important;
+}

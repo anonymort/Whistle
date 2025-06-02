@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { Shield, LoaderPinwheel } from "lucide-react";
+import { Shield, LoaderPinwheel, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,7 +50,36 @@ interface SubmissionFormProps {
 export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [encryptedFile, setEncryptedFile] = useState<string | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkVoiceEnabled = () => {
+      const enabled = localStorage.getItem('accessibility-voice') === 'true';
+      setVoiceEnabled(enabled);
+    };
+
+    checkVoiceEnabled();
+    window.addEventListener('storage', checkVoiceEnabled);
+    
+    return () => {
+      window.removeEventListener('storage', checkVoiceEnabled);
+    };
+  }, []);
+
+  const speakFieldLabel = (label: string, description?: string) => {
+    if (voiceEnabled && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      let text = `${label} field.`;
+      if (description) {
+        text += ` ${description}`;
+      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.8;
+      utterance.volume = 0.7;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   const form = useForm<SubmissionFormData>({
     resolver: zodResolver(submissionSchema),
