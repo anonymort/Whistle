@@ -8,7 +8,7 @@ import rateLimit from "express-rate-limit";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
-import { verifyPassword } from "./auth";
+import { verifyPassword, hashPassword } from "./auth";
 import { auditLogger, AUDIT_ACTIONS } from "./audit";
 import { generateCSRFToken, csrfProtection } from "./csrf";
 import { errorHandler, asyncHandler, ValidationError, AuthenticationError } from "./error-handler";
@@ -69,6 +69,30 @@ const requireAdminAuth: RequestHandler = (req, res, next) => {
   const session = req.session as any;
   if (!session || !session.isAdminAuthenticated || !session.adminId) {
     res.status(401).json({ error: "Unauthorized access" });
+    return;
+  }
+  
+  // Check if user has admin role
+  if (session.userRole !== 'admin') {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  next();
+};
+
+const requireAuth: RequestHandler = (req, res, next) => {
+  const session = req.session as any;
+  if (!session || (!session.isAdminAuthenticated && !session.isInvestigatorAuthenticated)) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  next();
+};
+
+const requireInvestigatorAuth: RequestHandler = (req, res, next) => {
+  const session = req.session as any;
+  if (!session || !session.isInvestigatorAuthenticated || !session.investigatorId) {
+    res.status(401).json({ error: "Investigator access required" });
     return;
   }
   next();
@@ -774,6 +798,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending assignment notification:", error);
       res.status(500).json({ error: "Failed to process assignment notification" });
+    }
+  });
+
+  // Investigator Authentication Routes
+  app.post("/api/investigator/login", csrfProtection, async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const investigator = await storage.getInvestigatorByEmail(email);
+      if (!investigator || !investigator.passwordHash) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const isValidPassword = await verifyPassword(password, investigator.passwordHash);
+      if (!isValidPassword) {
+        await auditLogger.log({
+          userId: email,
+          action: "FAILED_LOGIN_ATTEMPT",
+          resource: 'investigator_auth',
+          details: { email },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      if (investigator.isActive !== 'true') {
+        return res.status(401).json({ error: "Account inactive" });
+      }
+
+      (req.session as any).isInvestigatorAuthenticated = true;
+      (req.session as any).investigatorId = investigator.id;
+      (req.session as any).investigatorName = investigator.name;
+      (req.session as any).userRole = 'investigator';
+
+      await auditLogger.log({
+        userId: investigator.id.toString(),
+        action: "LOGIN_SUCCESS",
+        resource: 'investigator_auth',
+        details: { investigatorName: investigator.name },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json({ 
+        message: "Login successful",
+        investigator: {
+          id: investigator.id,
+          name: investigator.name,
+          email: investigator.email,
+          department: investigator.department,
+          role: 'investigator'
+        }
+      });
+    } catch (error) {
+      console.error("Investigator login error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Investigator logout
+  app.post("/api/investigator/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destruction error:", err);
+        res.status(500).json({ error: "Failed to logout" });
+        return;
+      }
+      res.clearCookie('whistlelite_admin_session');
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Get current user info (works for both admin and investigator)
+  app.get("/api/auth/user", requireAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      
+      if (session.isAdminAuthenticated) {
+        res.json({
+          id: session.adminId,
+          role: 'admin',
+          name: 'Administrator'
+        });
+      } else if (session.isInvestigatorAuthenticated) {
+        const investigator = await storage.getInvestigatorById(session.investigatorId);
+        res.json({
+          id: investigator?.id,
+          role: 'investigator',
+          name: investigator?.name,
+          email: investigator?.email,
+          department: investigator?.department
+        });
+      } else {
+        res.status(401).json({ error: "Not authenticated" });
+      }
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ error: "Failed to get user info" });
+    }
+  });
+
+  // Get assigned submissions for investigators
+  app.get("/api/investigator/submissions", requireInvestigatorAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const submissions = await storage.getAssignedSubmissions(session.investigatorName);
+      
+      await auditLogger.log({
+        userId: session.investigatorId.toString(),
+        action: "VIEW_ASSIGNED_SUBMISSIONS",
+        resource: 'submissions',
+        details: { count: submissions.length },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json(submissions);
+    } catch (error) {
+      console.error("Get investigator submissions error:", error);
+      res.status(500).json({ error: "Failed to fetch assigned submissions" });
+    }
+  });
+
+  // Set investigator password (admin only)
+  app.post("/api/admin/investigators/:id/password", requireAdminAuth, csrfProtection, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { password } = req.body;
+
+      if (!password || password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      const passwordHash = await hashPassword(password);
+      await storage.updateInvestigator(id, { passwordHash });
+
+      await auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: "SET_INVESTIGATOR_PASSWORD",
+        resource: 'investigator',
+        details: { investigatorId: id },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json({ message: "Password set successfully" });
+    } catch (error) {
+      console.error("Set investigator password error:", error);
+      res.status(500).json({ error: "Failed to set password" });
     }
   });
 

@@ -200,12 +200,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAssignedSubmissions(investigatorName: string): Promise<Submission[]> {
-    const submissions = await db
+    const submissionData = await db
       .select()
-      .from(submissionTable)
-      .where(eq(submissionTable.assignedTo, investigatorName))
-      .orderBy(submissionTable.submittedAt);
-    return submissions;
+      .from(submissions)
+      .where(eq(submissions.assignedTo, investigatorName))
+      .orderBy(submissions.submittedAt);
+    return submissionData;
   }
 }
 
