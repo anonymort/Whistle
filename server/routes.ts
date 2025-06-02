@@ -307,6 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const session = req.session as any;
         session.isAdminAuthenticated = true;
         session.adminId = crypto.randomUUID();
+        session.userRole = 'admin';
         session.loginTime = new Date();
         
         // Audit log successful login
