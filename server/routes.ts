@@ -124,12 +124,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhanced file validation if present
       if (validatedData.encryptedFile) {
         try {
-          // Parse the file data (now unencrypted, just metadata-stripped)
+          // Parse the file data (metadata-stripped only, not encrypted)
           const fileData = JSON.parse(validatedData.encryptedFile);
           
           // Validate the file data structure
           if (!fileData.data || !fileData.filename || !fileData.mimetype) {
-            res.status(400).json({ error: "Invalid file structure." });
+            res.status(400).json({ error: "Invalid file data structure." });
             return;
           }
           
