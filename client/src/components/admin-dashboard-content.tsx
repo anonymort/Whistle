@@ -400,16 +400,17 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                             </Badge>
                           </td>
                           <td className="py-3 px-4">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setSelectedSubmission(submission)}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
+                            <div className="flex gap-1">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSelectedSubmission(submission)}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                </DialogTrigger>
                               <DialogContent className="max-w-2xl">
                                 <DialogHeader>
                                   <DialogTitle>Submission Details</DialogTitle>
@@ -484,12 +485,49 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                 </div>
                               </DialogContent>
                             </Dialog>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(submission.id)}
+                              disabled={deleteSubmissionMutation.isPending}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                            </div>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                    <div className="text-sm text-gray-500">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
               </CardContent>

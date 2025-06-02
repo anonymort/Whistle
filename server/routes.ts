@@ -410,6 +410,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete submission
+  app.delete("/api/admin/submission/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid submission ID" });
+      }
+      
+      const submission = await storage.getSubmissionById(id);
+      if (!submission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+      
+      await storage.deleteSubmission(id);
+      
+      auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: AUDIT_ACTIONS.DELETE_SUBMISSION,
+        resource: 'submission',
+        details: { submissionId: id, originalHash: submission.sha256Hash }
+      });
+      
+      res.json({ message: "Submission deleted successfully" });
+    } catch (error) {
+      console.error("Delete submission error:", error);
+      res.status(500).json({ error: "Failed to delete submission" });
+    }
+  });
+
   // Decrypt submission content for admin
   app.post("/api/admin/decrypt", requireAdminAuth, async (req, res) => {
     try {

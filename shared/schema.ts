@@ -7,6 +7,7 @@ export const submissions = pgTable("submissions", {
   encryptedMessage: text("encrypted_message").notNull(),
   encryptedFile: text("encrypted_file"),
   replyEmail: text("reply_email"),
+  hospitalTrust: text("hospital_trust"),
   sha256Hash: text("sha256_hash").notNull(),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
@@ -15,6 +16,7 @@ export const insertSubmissionSchema = createInsertSchema(submissions).pick({
   encryptedMessage: true,
   encryptedFile: true,
   replyEmail: true,
+  hospitalTrust: true,
   sha256Hash: true,
 });
 

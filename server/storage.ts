@@ -8,6 +8,7 @@ export interface IStorage {
   getSubmissionCount(): Promise<number>;
   getAllSubmissions(): Promise<Submission[]>;
   getSubmissionById(id: number): Promise<Submission | undefined>;
+  deleteSubmission(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
