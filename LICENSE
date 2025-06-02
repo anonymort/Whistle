@@ -1,0 +1,42 @@
+MIT License
+
+Copyright (c) 2025 NHS Digital - WhistleLite Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+ADDITIONAL TERMS FOR NHS USE:
+
+1. MEDICAL DATA COMPLIANCE: This software is designed for NHS environments and
+   must comply with NHS Digital security standards and GDPR requirements when
+   processing healthcare-related whistleblowing reports.
+
+2. ENCRYPTION REQUIREMENTS: All implementations must maintain end-to-end
+   encryption for sensitive data. Encryption keys must be managed according
+   to NHS Digital cryptographic standards.
+
+3. AUDIT REQUIREMENTS: All deployments must maintain comprehensive audit logs
+   as required by NHS governance and regulatory frameworks.
+
+4. DATA RETENTION: Implementations must enforce the 90-day data retention
+   policy for submission data while maintaining 7-year retention for audit
+   logs as per NHS requirements.
+
+5. SECURITY DISCLOSURE: Security vulnerabilities affecting NHS deployments
+   must be reported to NHS Digital security teams in addition to the project
+   maintainers.
