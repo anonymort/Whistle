@@ -60,6 +60,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
       encryptedMessage: string;
       encryptedFile: string | null;
       replyEmail: string | null;
+      hospitalTrust: string | null;
       sha256Hash: string;
     }) => {
       const response = await apiRequest("POST", "/api/submit", payload);
@@ -95,6 +96,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
         encryptedMessage,
         encryptedFile,
         replyEmail: data.replyEmail || null,
+        hospitalTrust: data.hospital || null,
         sha256Hash: "", // Will be generated on server
       };
 

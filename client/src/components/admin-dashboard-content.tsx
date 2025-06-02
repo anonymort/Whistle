@@ -83,9 +83,17 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      
+      // Fix pagination when deleting last item on current page
+      const newTotalItems = submissions.length - 1;
+      const newTotalPages = Math.ceil(newTotalItems / itemsPerPage);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
+      
       toast({
         title: "Submission Deleted",
-        description: "The submission has been permanently removed",
+        description: "The submission and associated files have been permanently removed",
       });
     },
     onError: () => {

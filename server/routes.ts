@@ -423,6 +423,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Submission not found" });
       }
       
+      // Clean up associated files if they exist
+      if (submission.encryptedFile) {
+        try {
+          const fs = await import('fs');
+          const path = await import('path');
+          // Files are typically stored with submission ID as filename
+          const filePath = path.join(process.cwd(), 'uploads', `submission_${id}`);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        } catch (fileError) {
+          console.error("Failed to delete associated file:", fileError);
+          // Continue with database deletion even if file cleanup fails
+        }
+      }
+      
       await storage.deleteSubmission(id);
       
       auditLogger.log({
