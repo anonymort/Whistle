@@ -488,7 +488,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   // Get unique hospital trusts for filter dropdown
   const uniqueTrusts = Array.from(new Set(
     submissions.map((s: Submission) => s.hospitalTrust || 'Unknown')
-  )).sort();
+  )).sort() as string[];
 
   const handleSort = (newSortBy: 'date' | 'trust' | 'status' | 'priority') => {
     if (sortBy === newSortBy) {
@@ -717,7 +717,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                             )}
                           </div>
                           <div className="max-h-48 overflow-y-auto space-y-1">
-                            {uniqueTrusts.map((trust) => (
+                            {(uniqueTrusts as string[]).map((trust: string) => (
                               <div key={trust} className="flex items-center space-x-2">
                                 <Checkbox
                                   id={trust}
@@ -810,7 +810,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                   <tbody>
                     {paginatedSubmissions.map((submission: Submission) => {
                       const daysRemaining = calculateDaysRemaining(submission.submittedAt);
-                      const assignedInvestigator = investigators.find(inv => inv.name === submission.assignedTo);
+                      const assignedInvestigator = investigators.find((investigator: Investigator) => investigator.name === submission.assignedTo);
                       return (
                         <tr key={submission.id} className="border-b hover:bg-gray-50">
                           <td className="py-2 sm:py-3 px-2 sm:px-4 font-mono text-xs sm:text-sm">#{submission.id}</td>
@@ -999,7 +999,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                                 assignedTo: editingCase.assignedTo === "unassigned" ? null : editingCase.assignedTo,
                                                 category: editingCase.category === "uncategorized" ? null : editingCase.category
                                               },
-                                              previousAssignee: submission.assignedTo
+                                              previousAssignee: submission.assignedTo || undefined
                                             });
                                           }
                                         }}
