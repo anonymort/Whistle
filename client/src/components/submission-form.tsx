@@ -24,6 +24,8 @@ const submissionSchema = z.object({
     "Please select a valid NHS hospital from the list"
   ),
   category: z.string().min(1, "Please select a category for your report"),
+  reportType: z.string().min(1, "Please specify the type of safety concern"),
+  evidenceType: z.string().min(1, "Please specify what evidence supports this report"),
   eventDate: z.string().min(1, "Please provide the date when the incident occurred").refine(
     (val) => !isNaN(Date.parse(val)),
     "Please provide a valid date"
@@ -170,18 +172,82 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                     <SelectValue placeholder="Select the type of concern you're reporting" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="patient_safety">Patient Safety</SelectItem>
-                    <SelectItem value="clinical_governance">Clinical Governance</SelectItem>
-                    <SelectItem value="financial_irregularity">Financial Irregularity</SelectItem>
-                    <SelectItem value="data_protection">Data Protection</SelectItem>
-                    <SelectItem value="staff_conduct">Staff Conduct</SelectItem>
-                    <SelectItem value="discrimination">Discrimination</SelectItem>
+                    <SelectItem value="patient_safety">Patient Safety - Immediate Risk</SelectItem>
+                    <SelectItem value="clinical_governance">Clinical Governance - Systemic Issues</SelectItem>
+                    <SelectItem value="infection_control">Infection Control - Safety Protocol Breach</SelectItem>
+                    <SelectItem value="medication_safety">Medication Safety - Drug Administration Error</SelectItem>
+                    <SelectItem value="equipment_safety">Equipment Safety - Device Malfunction</SelectItem>
+                    <SelectItem value="staffing_safety">Staffing Safety - Unsafe Ratios/Competency</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </FormControl>
               <p className="text-xs text-gray-500 mt-1">
                 Choose the category that best describes your concern
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Report Type */}
+        <FormField
+          control={form.control}
+          name="reportType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm font-medium text-gray-700">
+                Type of Safety Concern <span className="text-error">*</span>
+              </FormLabel>
+              <FormControl>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 hover:border-gray-400 hover:shadow-sm focus:scale-[1.01] focus:shadow-md">
+                    <SelectValue placeholder="Specify the nature of this safety concern" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="immediate_patient_risk">Immediate Patient Risk - Urgent Action Required</SelectItem>
+                    <SelectItem value="recurring_pattern">Recurring Pattern - Multiple Similar Incidents</SelectItem>
+                    <SelectItem value="systemic_failure">Systemic Failure - Process/Protocol Breakdown</SelectItem>
+                    <SelectItem value="near_miss">Near Miss - Potential for Serious Harm</SelectItem>
+                    <SelectItem value="policy_violation">Policy Violation - Safety Standards Not Met</SelectItem>
+                    <SelectItem value="resource_constraint">Resource Constraint - Safety Compromised by Limitations</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <p className="text-xs text-gray-500 mt-1">
+                This helps determine the urgency and type of response needed
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Evidence Type */}
+        <FormField
+          control={form.control}
+          name="evidenceType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm font-medium text-gray-700">
+                Evidence Supporting This Report <span className="text-error">*</span>
+              </FormLabel>
+              <FormControl>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 hover:border-gray-400 hover:shadow-sm focus:scale-[1.01] focus:shadow-md">
+                    <SelectValue placeholder="What evidence do you have for this concern?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="direct_witness">Direct Witness - I personally observed the incident</SelectItem>
+                    <SelectItem value="documentation">Documentation - Written records/emails/policies support this</SelectItem>
+                    <SelectItem value="multiple_sources">Multiple Sources - Several people have reported similar issues</SelectItem>
+                    <SelectItem value="data_evidence">Data Evidence - Statistics/metrics show concerning patterns</SelectItem>
+                    <SelectItem value="expert_opinion">Expert Opinion - Clinical professionals have raised concerns</SelectItem>
+                    <SelectItem value="patient_feedback">Patient Feedback - Patients/families have reported issues</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <p className="text-xs text-gray-500 mt-1">
+                Strong evidence helps ensure appropriate action and protects against unfounded claims
               </p>
               <FormMessage />
             </FormItem>
@@ -324,7 +390,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                 </FormControl>
                 <div className="space-y-1 leading-none">
                   <FormLabel className="text-sm text-gray-700 cursor-pointer transition-colors duration-200 hover:text-primary">
-                    I consent to submitting this anonymous report. I understand that my submission will be encrypted and stored securely for up to 90 days. <span className="text-error">*</span>
+                    I consent to submitting this patient safety report. I understand this report will undergo verification review before any action is taken. I confirm this report is made in good faith and is based on genuine safety concerns supported by evidence. <span className="text-error">*</span>
                   </FormLabel>
                   <FormMessage />
                 </div>
