@@ -1,8 +1,8 @@
-# Whistle Deployment Guide
+# WhistleLite Deployment Guide
 
 ## Production Deployment
 
-This guide covers deploying Whistle for the Doctors' Association UK (DAUK) with production-grade security.
+This guide covers deploying WhistleLite for NHS environments with production-grade security.
 
 ## Prerequisites
 

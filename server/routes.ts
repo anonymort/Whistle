@@ -1,4 +1,4 @@
-import type { Express, RequestHandler, Request, Response, NextFunction } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSubmissionSchema } from "@shared/schema";
@@ -131,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit encrypted whistleblowing report (with CSRF protection)
-  app.post("/api/submit", csrfProtection, asyncHandler(async (req: Request, res: Response) => {
+  app.post("/api/submit", csrfProtection, async (req: Request, res: Response) => {
     try {
       // Validate request body
       const validatedData = insertSubmissionSchema.parse(req.body);
@@ -252,10 +252,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(500).json({ error: "Internal server error" });
     }
-  }));
+  });
 
   // Health check endpoint
-  app.get("/api/health", asyncHandler(async (req: Request, res: Response) => {
+  app.get("/api/health", async (req, res) => {
     try {
       const submissionCount = await storage.getSubmissionCount();
       res.json({ 
@@ -266,10 +266,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ status: "unhealthy", error: "Storage error" });
     }
-  }));
+  });
 
   // Data purge endpoint (for admin use)
-  app.post("/api/purge", asyncHandler(async (req: Request, res: Response) => {
+  app.post("/api/purge", async (req, res) => {
     try {
       const purgedCount = await storage.purgeOldSubmissions();
       res.json({ 
@@ -280,10 +280,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Purge error:", error);
       res.status(500).json({ error: "Purge operation failed" });
     }
-  }));
+  });
 
   // Admin authentication with proper session management
-  app.post("/api/admin/login", adminLoginRateLimit, asyncHandler(async (req: Request, res: Response) => {
+  app.post("/api/admin/login", adminLoginRateLimit, async (req, res) => {
     try {
       const { username, password } = req.body;
       
@@ -348,10 +348,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Admin login error:", error);
       res.status(500).json({ error: "Authentication failed" });
     }
-  }));
+  });
 
   // Admin logout
-  app.post("/api/admin/logout", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
+  app.post("/api/admin/logout", requireAdminAuth, async (req, res) => {
     try {
       req.session.destroy((err) => {
         if (err) {
@@ -365,7 +365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Logout error:", error);
       res.status(500).json({ error: "Logout failed" });
     }
-  }));
+  });
 
   // Check admin session status
   app.get("/api/admin/status", (req, res) => {
@@ -377,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoints - all protected with authentication
-  app.get("/api/admin/submissions", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
+  app.get("/api/admin/submissions", requireAdminAuth, async (req, res) => {
     try {
       const session = req.session as any;
       const submissions = await storage.getAllSubmissions();
@@ -397,9 +397,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Admin submissions error:", error);
       res.status(500).json({ error: "Failed to fetch submissions" });
     }
-  }));
+  });
 
-  app.get("/api/admin/stats", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
+  app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
     try {
       const submissionCount = await storage.getSubmissionCount();
       const virusStats = virusScanner.getStatistics();
@@ -424,9 +424,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Admin stats error:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
     }
-  }));
+  });
 
-  app.get("/api/admin/submission/:id", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
+  app.get("/api/admin/submission/:id", requireAdminAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
