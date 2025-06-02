@@ -2,26 +2,30 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import crypto from "crypto";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 // Security: Hash password function
 function hashPassword(password: string): string {
   return crypto.pbkdf2Sync(password, process.env.SESSION_SECRET || 'fallback-salt', 100000, 64, 'sha512').toString('hex');
 }
 
-// Ensure required environment variables
+// Validate required environment variables
 if (!process.env.SESSION_SECRET) {
-  process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex');
-  console.warn("⚠️  SESSION_SECRET not found. Generated temporary secret. For production, set SESSION_SECRET in environment variables.");
+  console.error("❌ SESSION_SECRET is required. Please set it in your environment variables.");
+  process.exit(1);
 }
 
 if (!process.env.ADMIN_USERNAME) {
-  process.env.ADMIN_USERNAME = "admin";
-  console.warn("⚠️  ADMIN_USERNAME not set. Using default 'admin'. Change this in production.");
+  console.error("❌ ADMIN_USERNAME is required. Please set it in your environment variables.");
+  process.exit(1);
 }
 
 if (!process.env.ADMIN_PASSWORD) {
-  process.env.ADMIN_PASSWORD = "admin123";
-  console.warn("⚠️  ADMIN_PASSWORD not set. Using default 'admin123'. Change this immediately in production.");
+  console.error("❌ ADMIN_PASSWORD is required. Please set it in your environment variables.");
+  process.exit(1);
 }
 
 const app = express();
