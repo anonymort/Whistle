@@ -9,6 +9,8 @@ export interface IStorage {
   getAllSubmissions(): Promise<Submission[]>;
   getSubmissionById(id: number): Promise<Submission | undefined>;
   deleteSubmission(id: number): Promise<void>;
+  createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog>;
+  getRecentAuditLogs(limit?: number): Promise<AuditLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -52,6 +54,22 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSubmission(id: number): Promise<void> {
     await db.delete(submissions).where(eq(submissions.id, id));
+  }
+
+  async createAuditLog(insertAuditLog: InsertAuditLog): Promise<AuditLog> {
+    const [auditLog] = await db
+      .insert(auditLogs)
+      .values(insertAuditLog)
+      .returning();
+    return auditLog;
+  }
+
+  async getRecentAuditLogs(limit: number = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit);
   }
 }
 

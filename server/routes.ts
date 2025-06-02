@@ -352,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const submissions = await storage.getAllSubmissions();
       
       // Audit log viewing submissions
-      auditLogger.log({
+      await auditLogger.log({
         userId: session.adminId,
         action: AUDIT_ACTIONS.VIEW_SUBMISSIONS,
         resource: 'submissions',

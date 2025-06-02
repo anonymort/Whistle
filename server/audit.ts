@@ -1,45 +1,28 @@
-import crypto from "crypto";
-
-export interface AuditLog {
-  id: string;
-  timestamp: Date;
-  userId: string;
-  action: string;
-  resource: string;
-  details: Record<string, any>;
-  ipAddress?: string;
-  userAgent?: string;
-}
+import { storage } from "./storage";
 
 class AuditLogger {
-  private logs: AuditLog[] = [];
-
-  log(entry: Omit<AuditLog, 'id' | 'timestamp'>): void {
-    const auditEntry: AuditLog = {
-      id: crypto.randomUUID(),
-      timestamp: new Date(),
-      ...entry
-    };
-
-    this.logs.push(auditEntry);
-    
-    // Log to console for immediate visibility
-    console.log(`[AUDIT] ${auditEntry.timestamp.toISOString()} - ${auditEntry.userId}: ${auditEntry.action} on ${auditEntry.resource}`, auditEntry.details);
-    
-    // In production, this would also write to a secure audit database
-    this.cleanupOldLogs();
+  async log(entry: {
+    userId: string;
+    action: string;
+    resource: string;
+    details?: Record<string, any>;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    try {
+      await storage.createAuditLog(entry);
+      console.log(`[AUDIT] ${entry.action} by ${entry.userId} on ${entry.resource}`, entry.details);
+    } catch (error) {
+      console.error("Failed to create audit log:", error);
+    }
   }
 
-  getRecentLogs(limit: number = 100): AuditLog[] {
-    return this.logs
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, limit);
-  }
-
-  private cleanupOldLogs(): void {
-    // Keep only last 1000 logs in memory
-    if (this.logs.length > 1000) {
-      this.logs = this.logs.slice(-1000);
+  async getRecentLogs(limit: number = 100) {
+    try {
+      return await storage.getRecentAuditLogs(limit);
+    } catch (error) {
+      console.error("Failed to fetch audit logs:", error);
+      return [];
     }
   }
 }
