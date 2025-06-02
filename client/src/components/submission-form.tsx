@@ -215,23 +215,11 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                 <FormControl>
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={field.value}
-                    onClick={() => field.onChange(!field.value)}
-                    className={`mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors ${
-                      field.value 
-                        ? 'bg-primary border-primary text-primary-foreground' 
-                        : 'border-input bg-background hover:bg-accent'
-                    }`}
-                  >
-                    {field.value && (
-                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 12 12">
-                        <path d="M10 3.5L4.5 9 2 6.5l1-1 1.5 1.5L9 2.5l1 1z"/>
-                      </svg>
-                    )}
-                  </button>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-1 h-4 w-4"
+                  />
                 </FormControl>
                 <div className="space-y-1 leading-none">
                   <FormLabel className="text-sm text-gray-700">
@@ -249,23 +237,11 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                 <FormControl>
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={field.value}
-                    onClick={() => field.onChange(!field.value)}
-                    className={`mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors ${
-                      field.value 
-                        ? 'bg-primary border-primary text-primary-foreground' 
-                        : 'border-input bg-background hover:bg-accent'
-                    }`}
-                  >
-                    {field.value && (
-                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 12 12">
-                        <path d="M10 3.5L4.5 9 2 6.5l1-1 1.5 1.5L9 2.5l1 1z"/>
-                      </svg>
-                    )}
-                  </button>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-1 h-4 w-4"
+                  />
                 </FormControl>
                 <div className="space-y-1 leading-none">
                   <FormLabel className="text-sm text-gray-700">
