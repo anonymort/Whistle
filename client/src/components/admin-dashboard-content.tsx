@@ -717,7 +717,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                             )}
                           </div>
                           <div className="max-h-48 overflow-y-auto space-y-1">
-                            {uniqueTrusts.map((trust: string) => (
+                            {uniqueTrusts.map((trust) => (
                               <div key={trust} className="flex items-center space-x-2">
                                 <Checkbox
                                   id={trust}
@@ -956,8 +956,8 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                             </SelectTrigger>
                                             <SelectContent>
                                               <SelectItem value="unassigned">Unassigned</SelectItem>
-                                              {investigators.map((inv: any) => (
-                                                <SelectItem key={inv.id} value={inv.name}>{inv.name} - {inv.department}</SelectItem>
+                                              {investigators.map((investigator: Investigator) => (
+                                                <SelectItem key={investigator.id} value={investigator.name}>{investigator.name} - {investigator.department}</SelectItem>
                                               ))}
                                             </SelectContent>
                                           </Select>
