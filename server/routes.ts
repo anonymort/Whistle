@@ -39,7 +39,7 @@ function setupSession(app: Express) {
     throw new Error("SESSION_SECRET environment variable is required");
   }
 
-  const sessionTtl = 4 * 60 * 60 * 1000; // 4 hours for admin sessions
+  const sessionTtl = 30 * 60 * 1000; // 30 minutes for admin sessions - reduced for security
   const pgStore = connectPg(session);
   
   const sessionStore = new pgStore({
@@ -82,7 +82,16 @@ const requireAdminAuth: RequestHandler = (req, res, next) => {
 };
 
 const requireAuth: RequestHandler = (req, res, next) => {
-  const session = req.session as any;
+  interface AuthenticatedSession {
+    isAdminAuthenticated?: boolean;
+    isInvestigatorAuthenticated?: boolean;
+    userRole?: string;
+    adminId?: string;
+    investigatorId?: number;
+  }
+  
+  const session = req.session as any as AuthenticatedSession;
+  
   if (!session || (!session.isAdminAuthenticated && !session.isInvestigatorAuthenticated)) {
     res.status(401).json({ error: "Authentication required" });
     return;
@@ -91,7 +100,12 @@ const requireAuth: RequestHandler = (req, res, next) => {
 };
 
 const requireInvestigatorAuth: RequestHandler = (req, res, next) => {
-  const session = req.session as any;
+  const session = req.session as Express.Session & {
+    isInvestigatorAuthenticated?: boolean;
+    investigatorId?: number;
+    userRole?: string;
+  };
+  
   if (!session || !session.isInvestigatorAuthenticated || !session.investigatorId) {
     res.status(401).json({ error: "Investigator access required" });
     return;
@@ -232,8 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json({ 
         message: "Submission received successfully",
-        id: submission.id,
-        submittedAt: submission.submittedAt 
+        reference: submissionHash.substring(0, 8) // Use hash prefix instead of sequential ID
       });
 
     } catch (error) {
