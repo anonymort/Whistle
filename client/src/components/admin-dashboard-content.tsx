@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, Filter, X, Edit3, MessageSquare, User, Calendar, Flag, TrendingUp, CheckCircle, CircleX, AlertCircle, Pause, Settings } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, Filter, X, Edit3, MessageSquare, User, Calendar, Flag, TrendingUp, CheckCircle, CircleX, AlertCircle, Pause, Settings, BarChart3 } from "lucide-react";
+import AnalyticsDashboard from "@/components/analytics-dashboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,8 @@ interface Submission {
   priority: string;
   assignedTo: string | null;
   category: string | null;
+  eventDate: string | null;
+  eventTime: string | null;
   riskLevel: string;
   lastUpdated: Date;
 }
@@ -626,6 +629,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
           <TabsList>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="investigators">Investigators</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
@@ -1383,6 +1387,10 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <AnalyticsDashboard submissions={submissions} investigators={investigators} />
           </TabsContent>
 
           <TabsContent value="security">
