@@ -5,8 +5,8 @@
  * Usage: node generate-admin-hash.js [password]
  */
 
-const bcrypt = require('bcrypt');
-const readline = require('readline');
+import bcrypt from 'bcrypt';
+import readline from 'readline';
 
 const SALT_ROUNDS = 12;
 

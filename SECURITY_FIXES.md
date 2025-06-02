@@ -7,8 +7,8 @@
 **Impact**: Severe - Unauthorised access to admin dashboard
 **Solution**: 
 - Admin credentials now sourced from environment variables
-- Default fallback credentials only for development with clear warnings
-- Password hashing implemented using PBKDF2 with 100,000 iterations
+- No fallback credentials - server requires proper configuration
+- Password hashing implemented using bcrypt with unique salts (12 rounds)
 - Secure session management with unique session IDs
 
 ### 2. Encryption Keys in Memory
@@ -25,7 +25,7 @@
 ```bash
 # Authentication (REQUIRED)
 ADMIN_USERNAME=your_secure_admin_username
-ADMIN_PASSWORD=your_very_secure_password_here
+ADMIN_PASSWORD_HASH=your_bcrypt_hashed_password_here
 
 # Session Security (REQUIRED)
 SESSION_SECRET=your_64_character_random_secret_key_here
@@ -48,13 +48,24 @@ ADMIN_SIGNING_PRIVATE_KEY=base64_private_signing_key
 ## Production Deployment Checklist
 
 - [ ] Set unique ADMIN_USERNAME (not 'admin')
-- [ ] Set strong ADMIN_PASSWORD (minimum 12 characters, mixed case, numbers, symbols)
+- [ ] Generate bcrypt password hash using `node generate-admin-hash.js`
+- [ ] Set ADMIN_PASSWORD_HASH in environment variables (not plain text password)
 - [ ] Generate and set SESSION_SECRET (64+ random characters)
 - [ ] Set encryption keys to prevent data loss on restart
 - [ ] Configure HTTPS/TLS termination
 - [ ] Enable firewall rules for database access
 - [ ] Set up log monitoring and alerting
 - [ ] Configure backup procedures for encryption keys
+
+## Password Hash Generation
+
+To generate a secure bcrypt password hash for the admin account:
+
+```bash
+node generate-admin-hash.js your_secure_password
+```
+
+This will output the bcrypt hash to add to your .env file as ADMIN_PASSWORD_HASH.
 
 ## NHS Compliance Notes
 
