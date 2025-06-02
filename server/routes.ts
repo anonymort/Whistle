@@ -261,9 +261,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get credentials from environment variables
       const adminUsername = process.env.ADMIN_USERNAME;
-      const adminPassword = process.env.ADMIN_PASSWORD;
+      const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
       
-      if (!adminUsername || !adminPassword) {
+      if (!adminUsername || !adminPasswordHash) {
         console.error("Admin credentials not configured in environment variables");
         return res.status(500).json({ error: "Server configuration error" });
       }
@@ -274,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Buffer.from(adminUsername)
       );
       
-      const passwordValid = verifyPassword(password, adminPassword);
+      const passwordValid = await verifyPassword(password, adminPasswordHash);
       
       if (usernameValid && passwordValid) {
         // Create secure session

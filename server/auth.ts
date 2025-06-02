@@ -1,18 +1,13 @@
-import crypto from "crypto";
+import bcrypt from "bcrypt";
 
-// Secure password hashing using PBKDF2
-export function hashPassword(password: string): string {
-  const salt = process.env.SESSION_SECRET || 'fallback-salt';
-  return crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+const SALT_ROUNDS = 12; // High security for admin passwords
+
+// Secure password hashing using bcrypt with unique salts
+export async function hashPassword(password: string): Promise<string> {
+  return await bcrypt.hash(password, SALT_ROUNDS);
 }
 
-// Secure password comparison that prevents timing attacks
-export function verifyPassword(inputPassword: string, storedPassword: string): boolean {
-  const hashedInput = hashPassword(inputPassword);
-  const hashedStored = hashPassword(storedPassword);
-  
-  return crypto.timingSafeEqual(
-    Buffer.from(hashedInput),
-    Buffer.from(hashedStored)
-  );
+// Secure password comparison using bcrypt's built-in timing-safe comparison
+export async function verifyPassword(inputPassword: string, storedHashedPassword: string): Promise<boolean> {
+  return await bcrypt.compare(inputPassword, storedHashedPassword);
 }
