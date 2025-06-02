@@ -500,9 +500,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set appropriate headers for download with original filename and mimetype
       res.setHeader('Content-Disposition', `attachment; filename="${fileInfo.filename || 'attachment'}"`);
       res.setHeader('Content-Type', fileInfo.mimetype || 'application/octet-stream');
-      res.setHeader('Content-Length', fileBuffer.length);
+      res.setHeader('Content-Length', fileBuffer.length.toString());
+      res.setHeader('Cache-Control', 'no-cache');
       
-      res.send(fileBuffer);
+      // Send the buffer directly
+      res.end(fileBuffer);
     } catch (error) {
       console.error("Download error:", error);
       res.status(500).json({ error: "Download failed" });
