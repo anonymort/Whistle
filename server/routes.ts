@@ -10,6 +10,8 @@ import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
 import { verifyPassword } from "./auth";
 import { auditLogger, AUDIT_ACTIONS } from "./audit";
+import { generateCSRFToken, csrfProtection } from "./csrf";
+import { errorHandler, asyncHandler, ValidationError, AuthenticationError } from "./error-handler";
 
 // File signature validation for security
 function validateFileSignature(signature: Buffer): boolean {
@@ -86,10 +88,14 @@ function setupSession(app: Express) {
 const requireAdminAuth: RequestHandler = (req, res, next) => {
   const session = req.session as any;
   if (!session || !session.isAdminAuthenticated || !session.adminId) {
-    return res.status(401).json({ error: "Unauthorized access" });
+    res.status(401).json({ error: "Unauthorized access" });
+    return;
   }
   next();
 };
+
+// Store cleanup interval reference to prevent memory leaks
+let cleanupInterval: NodeJS.Timeout | null = null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup secure session management
@@ -98,7 +104,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/submit", submitRateLimit);
 
   // Setup automated data retention cleanup (runs daily)
-  setInterval(async () => {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+  }
+  
+  cleanupInterval = setInterval(async () => {
     try {
       const deletedCount = await storage.purgeOldSubmissions();
       if (deletedCount > 0) {
