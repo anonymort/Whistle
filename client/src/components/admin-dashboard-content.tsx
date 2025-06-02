@@ -837,16 +837,16 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                         <div className="col-span-2">
                                           <Label>Assign to Investigator</Label>
                                           <Select 
-                                            value={editingCase?.assignedTo || submission.assignedTo || ""}
+                                            value={editingCase?.assignedTo || submission.assignedTo || "unassigned"}
                                             onValueChange={(value) => 
-                                              setEditingCase(prev => prev ? {...prev, assignedTo: value || null} : null)
+                                              setEditingCase(prev => prev ? {...prev, assignedTo: value === "unassigned" ? null : value} : null)
                                             }
                                           >
                                             <SelectTrigger>
                                               <SelectValue placeholder="Select investigator" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                              <SelectItem value="">Unassigned</SelectItem>
+                                              <SelectItem value="unassigned">Unassigned</SelectItem>
                                               {investigators.map((inv: any) => (
                                                 <SelectItem key={inv.id} value={inv.name}>{inv.name} - {inv.department}</SelectItem>
                                               ))}
@@ -857,16 +857,16 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                         <div className="col-span-2">
                                           <Label>Category</Label>
                                           <Select 
-                                            value={editingCase?.category || submission.category || ""}
+                                            value={editingCase?.category || submission.category || "uncategorized"}
                                             onValueChange={(value) => 
-                                              setEditingCase(prev => prev ? {...prev, category: value || null} : null)
+                                              setEditingCase(prev => prev ? {...prev, category: value === "uncategorized" ? null : value} : null)
                                             }
                                           >
                                             <SelectTrigger>
                                               <SelectValue placeholder="Select category" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                              <SelectItem value="">Not categorized</SelectItem>
+                                              <SelectItem value="uncategorized">Not categorized</SelectItem>
                                               <SelectItem value="patient_safety">Patient Safety</SelectItem>
                                               <SelectItem value="clinical_governance">Clinical Governance</SelectItem>
                                               <SelectItem value="financial_irregularity">Financial Irregularity</SelectItem>
