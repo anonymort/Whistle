@@ -170,6 +170,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return;
             }
           }
+
+          // Perform comprehensive virus scanning
+          try {
+            const virusScanResult = await virusScanner.scanFile(
+              fileBuffer, 
+              `encrypted_file_${Date.now()}`, 
+              'anonymous_user'
+            );
+
+            if (!virusScanResult.isClean) {
+              auditLogger.log({
+                userId: 'anonymous_user',
+                action: AUDIT_ACTIONS.SECURITY_THREAT_DETECTED,
+                resource: 'file_upload',
+                details: {
+                  threatName: virusScanResult.threatName,
+                  fileHash: virusScanResult.fileHash,
+                  scanEngine: virusScanResult.scanEngine,
+                  rejectedFile: true
+                }
+              });
+
+              res.status(400).json({ 
+                error: "File contains potentially malicious content and has been rejected for security reasons" 
+              });
+              return;
+            }
+          } catch (scanError) {
+            console.error("Virus scan failed:", scanError);
+            res.status(500).json({ error: "File security validation failed" });
+            return;
+          }
           
         } catch (error) {
           console.error("File validation error:", error);
@@ -370,7 +402,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
     try {
       const submissionCount = await storage.getSubmissionCount();
-      res.json({ submissionCount });
+      const virusStats = virusScanner.getStatistics();
+      
+      auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: AUDIT_ACTIONS.VIEW_STATS,
+        resource: 'statistics',
+        details: { submissionCount, virusStats }
+      });
+      
+      res.json({ 
+        submissionCount,
+        virusScanningStats: {
+          totalScans: virusStats.totalScans,
+          totalDetections: virusStats.totalDetections,
+          detectionRate: virusStats.detectionRate,
+          scanningEnabled: true
+        }
+      });
     } catch (error) {
       console.error("Admin stats error:", error);
       res.status(500).json({ error: "Failed to fetch stats" });

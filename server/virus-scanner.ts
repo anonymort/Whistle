@@ -236,13 +236,13 @@ export class VirusScanner {
     const frequencies = new Array(256).fill(0);
     
     for (let i = 0; i < buffer.length; i++) {
-      frequencies[buffer[i]]++;
+      frequencies[buffer[i] as number]++;
     }
 
     let entropy = 0;
     const length = buffer.length;
 
-    for (let i = 0; i < 256; i++) {
+    for (let i = 0; i < frequencies.length; i++) {
       if (frequencies[i] > 0) {
         const p = frequencies[i] / length;
         entropy -= p * Math.log2(p);

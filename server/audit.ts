@@ -55,5 +55,7 @@ export const AUDIT_ACTIONS = {
   PURGE_DATA: 'purge_data',
   EXPORT_DATA: 'export_data',
   VIEW_STATS: 'view_stats',
-  SUBMISSION_RECEIVED: 'submission_received'
+  SUBMISSION_RECEIVED: 'submission_received',
+  SECURITY_THREAT_DETECTED: 'security_threat_detected',
+  FILE_VIRUS_SCAN: 'file_virus_scan'
 } as const;
