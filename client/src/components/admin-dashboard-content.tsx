@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -30,6 +32,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<'date' | 'trust'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedTrusts, setSelectedTrusts] = useState<string[]>([]);
   const itemsPerPage = 10;
   const { toast } = useToast();
 
@@ -179,8 +182,15 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
     return Math.max(0, diffDays);
   };
 
-  // Sort and paginate submissions
-  const sortedSubmissions = [...submissions].sort((a: Submission, b: Submission) => {
+  // Filter submissions by selected trusts
+  const filteredSubmissions = selectedTrusts.length > 0 
+    ? submissions.filter((submission: Submission) => 
+        selectedTrusts.includes(submission.hospitalTrust || 'Unknown')
+      )
+    : submissions;
+
+  // Sort filtered submissions
+  const sortedSubmissions = [...filteredSubmissions].sort((a: Submission, b: Submission) => {
     if (sortBy === 'trust') {
       const aName = a.hospitalTrust || 'Unknown';
       const bName = b.hospitalTrust || 'Unknown';
@@ -204,6 +214,11 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   const totalPages = Math.ceil(sortedSubmissions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedSubmissions = sortedSubmissions.slice(startIndex, startIndex + itemsPerPage);
+
+  // Get unique hospital trusts for filter dropdown
+  const uniqueTrusts = Array.from(new Set(
+    submissions.map((s: Submission) => s.hospitalTrust || 'Unknown')
+  )).sort();
 
   const handleSort = (newSortBy: 'date' | 'trust') => {
     if (sortBy === newSortBy) {
@@ -325,9 +340,9 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Sorting and pagination controls */}
+                {/* Sorting and filtering controls */}
                 <div className="flex justify-between items-center mb-4">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <Button
                       variant={sortBy === 'date' ? 'default' : 'outline'}
                       size="sm"
@@ -342,9 +357,73 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                     >
                       Sort by Trust {sortBy === 'trust' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </Button>
+                    
+                    {/* Hospital Trust Filter */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Filter className="w-4 h-4" />
+                          Filter by Trust
+                          {selectedTrusts.length > 0 && (
+                            <Badge variant="secondary" className="ml-1">
+                              {selectedTrusts.length}
+                            </Badge>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Select Hospital Trusts</span>
+                            {selectedTrusts.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedTrusts([])}
+                                className="h-6 px-2"
+                              >
+                                <X className="w-3 h-3" />
+                                Clear
+                              </Button>
+                            )}
+                          </div>
+                          <div className="max-h-48 overflow-y-auto space-y-1">
+                            {uniqueTrusts.map((trust) => (
+                              <div key={trust} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={trust}
+                                  checked={selectedTrusts.includes(trust)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedTrusts([...selectedTrusts, trust]);
+                                    } else {
+                                      setSelectedTrusts(selectedTrusts.filter(t => t !== trust));
+                                    }
+                                  }}
+                                />
+                                <label 
+                                  htmlFor={trust}
+                                  className="text-sm cursor-pointer truncate flex-1"
+                                  title={trust}
+                                >
+                                  {trust}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="text-sm text-gray-500">
-                    Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, submissions.length)} of {submissions.length} submissions
+                    Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, sortedSubmissions.length)} of {sortedSubmissions.length} submissions
+                    {selectedTrusts.length > 0 && (
+                      <span className="text-blue-600 ml-1">(filtered)</span>
+                    )}
                   </div>
                 </div>
 
