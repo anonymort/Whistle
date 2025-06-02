@@ -478,13 +478,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { decryptData } = await import("./encryption");
       const decryptedFileData = await decryptData(submission.encryptedFile);
       
-      // Parse the file data (it should contain filename, mimetype, and data)
-      const fileInfo = JSON.parse(decryptedFileData);
-      const fileBuffer = Buffer.from(fileInfo.data, 'base64');
+      // The decrypted data is base64-encoded file content directly
+      const fileBuffer = Buffer.from(decryptedFileData, 'base64');
       
       // Set appropriate headers for download
-      res.setHeader('Content-Disposition', `attachment; filename="${fileInfo.filename || 'attachment'}"`);
-      res.setHeader('Content-Type', fileInfo.mimetype || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="submission_${submissionId}_attachment"`);
+      res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Content-Length', fileBuffer.length);
       
       res.send(fileBuffer);
