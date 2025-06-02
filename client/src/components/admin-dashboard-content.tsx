@@ -393,12 +393,12 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-300">Manage submissions and investigators</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">Manage submissions and investigators</p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
           <Dialog open={keyRotationDialogOpen} onOpenChange={setKeyRotationDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="flex items-center space-x-2">
@@ -433,66 +433,66 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
-                <FileText className="w-8 h-8 text-blue-600" />
+                <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
                 <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="text-xl sm:text-2xl font-bold">{stats.total}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-8 h-8 text-blue-600" />
+                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
                 <div>
-                  <p className="text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'new').length}</p>
-                  <p className="text-sm text-muted-foreground">New</p>
+                  <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'new').length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">New</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
-                <Settings className="w-8 h-8 text-purple-600" />
+                <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
                 <div>
-                  <p className="text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'investigating').length}</p>
-                  <p className="text-sm text-muted-foreground">Investigating</p>
+                  <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'investigating').length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Investigating</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
-                <AlertTriangle className="w-8 h-8 text-red-600" />
+                <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
                 <div>
-                  <p className="text-2xl font-bold">{submissions.filter((s: Submission) => s.priority === 'critical').length}</p>
-                  <p className="text-sm text-muted-foreground">Critical</p>
+                  <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.priority === 'critical').length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Critical</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
-                <Clock className="w-8 h-8 text-orange-600" />
+                <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
                 <div>
-                  <p className="text-2xl font-bold">{submissions.filter((s: Submission) => {
+                  <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => {
                     const now = new Date();
                     const daysDiff = Math.ceil((now.getTime() - new Date(s.submittedAt).getTime()) / (1000 * 60 * 60 * 24));
                     return Math.max(0, 20 - daysDiff) <= 7;
                   }).length}</p>
-                  <p className="text-sm text-muted-foreground">Urgent</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Urgent</p>
                 </div>
               </div>
             </CardContent>

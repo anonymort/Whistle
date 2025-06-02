@@ -44,13 +44,15 @@ export default function WhistleblowingPortal() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Security Banner */}
-        <SecurityBanner />
+        <div className="mb-4 sm:mb-6">
+          <SecurityBanner />
+        </div>
 
         {/* Submission Form */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="mb-4 sm:mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Submit Anonymous Report</h2>
             <p className="text-gray-600">Report concerns safely and anonymously. All data is encrypted and automatically deleted after 90 days.</p>
           </div>
