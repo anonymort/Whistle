@@ -1,4 +1,18 @@
-import { submissions, auditLogs, type Submission, type InsertSubmission, type AuditLog, type InsertAuditLog } from "@shared/schema";
+import { 
+  submissions, 
+  auditLogs, 
+  caseNotes, 
+  investigators,
+  type Submission, 
+  type InsertSubmission, 
+  type UpdateSubmission,
+  type AuditLog, 
+  type InsertAuditLog,
+  type CaseNote,
+  type InsertCaseNote,
+  type Investigator,
+  type InsertInvestigator
+} from "@shared/schema";
 import { db } from "./db";
 import { eq, lt, sql, desc } from "drizzle-orm";
 
@@ -9,8 +23,17 @@ export interface IStorage {
   getAllSubmissions(): Promise<Submission[]>;
   getSubmissionById(id: number): Promise<Submission | undefined>;
   deleteSubmission(id: number): Promise<void>;
+  updateSubmission(id: number, updates: UpdateSubmission): Promise<Submission>;
   createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog>;
   getRecentAuditLogs(limit?: number): Promise<AuditLog[]>;
+  // Case Notes
+  createCaseNote(caseNote: InsertCaseNote): Promise<CaseNote>;
+  getCaseNotes(submissionId: number): Promise<CaseNote[]>;
+  deleteCaseNote(noteId: number): Promise<void>;
+  // Investigators
+  getAllInvestigators(): Promise<Investigator[]>;
+  createInvestigator(investigator: InsertInvestigator): Promise<Investigator>;
+  updateInvestigator(id: number, investigator: Partial<InsertInvestigator>): Promise<Investigator>;
 }
 
 export class DatabaseStorage implements IStorage {
