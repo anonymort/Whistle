@@ -1,16 +1,16 @@
-# WhistleLite
+# Whistle
 
-A secure, GDPR-compliant NHS whistleblowing platform providing advanced technological safeguards for anonymous reporting with a focus on user protection and ease of use.
+A secure, GDPR-compliant whistleblowing platform hosted by the Doctors' Association UK (DAUK) providing advanced technological safeguards for anonymous reporting with a focus on user protection and ease of use.
 
 ## Overview
 
-WhistleLite addresses critical gaps in existing NHS safety reporting systems like Datix by providing:
+Whistle addresses critical gaps in existing healthcare safety reporting systems like Datix by providing:
 
 - **Anonymous Reporting**: True anonymity through end-to-end encryption
 - **Mobile-First Design**: Accessible reporting from any device
 - **GDPR Compliance**: Built-in data protection and retention policies
 - **Advanced Security**: Military-grade encryption and audit logging
-- **NHS Integration**: Comprehensive hospital database and workflow integration
+- **Healthcare Integration**: Comprehensive hospital database and workflow integration
 
 ## Key Features
 
@@ -21,11 +21,11 @@ WhistleLite addresses critical gaps in existing NHS safety reporting systems lik
 - **Data Retention**: Automatic 90-day data purging for GDPR compliance
 - **Audit Logging**: Comprehensive security event tracking
 
-### 🏥 NHS Integration
-- **Hospital Directory**: Complete NHS hospital database with search functionality
-- **Admin Dashboard**: Secure management interface for healthcare administrators
+### 🏥 Healthcare Integration
+- **Hospital Directory**: Complete UK hospital database with search functionality
+- **Admin Dashboard**: Secure management interface for DAUK administrators
 - **Submission Management**: Encrypted data viewing and response system
-- **Production-Ready**: Suitable for NHS deployment with security standards compliance
+- **Production-Ready**: Suitable for healthcare deployment with security standards compliance
 
 ### 🛡️ Advanced Protection
 - **CSRF Protection**: Token-based request validation
@@ -54,8 +54,8 @@ WhistleLite addresses critical gaps in existing NHS safety reporting systems lik
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-org/whistlelite.git
-cd whistlelite
+git clone https://github.com/dauk/whistle.git
+cd whistle
 ```
 
 2. **Install dependencies**
@@ -175,9 +175,9 @@ node generate-admin-hash.js your_secure_password
 - **Rate Limiting**: Protection against brute force attacks
 - **CSRF Protection**: Token-based request validation
 
-## NHS Compliance
+## Healthcare Compliance
 
-WhistleLite meets NHS Digital security standards for:
+Whistle meets healthcare security standards for:
 
 - **Data Protection**: GDPR-compliant data handling and retention
 - **Access Control**: Secure authentication and authorization
@@ -286,14 +286,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Security
 
-For security vulnerabilities, please email security@whistlelite.nhs.uk instead of using the issue tracker.
+For security vulnerabilities, please email security@dauk.org instead of using the issue tracker.
 
 ## Support
 
 - **Documentation**: See the `/docs` directory for detailed guides
 - **Issues**: Use GitHub Issues for bug reports and feature requests
-- **NHS Support**: Contact your local NHS Digital team for deployment assistance
+- **DAUK Support**: Contact the Doctors' Association UK for deployment assistance
 
 ---
 
-**WhistleLite** - Empowering safe, anonymous reporting in healthcare environments.
+**Whistle** - Empowering safe, anonymous reporting in healthcare environments.
