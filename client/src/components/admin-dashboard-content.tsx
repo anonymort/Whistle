@@ -729,6 +729,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                       setSelectedTrusts(selectedTrusts.filter(t => t !== trust));
                                     }
                                   }}
+                                  className="h-4 w-4"
                                 />
                                 <label 
                                   htmlFor={trust}
