@@ -23,8 +23,8 @@ if (!process.env.ADMIN_USERNAME) {
   process.exit(1);
 }
 
-if (!process.env.ADMIN_PASSWORD) {
-  console.error("❌ ADMIN_PASSWORD is required. Please set it in your environment variables.");
+if (!process.env.ADMIN_PASSWORD_HASH) {
+  console.error("❌ ADMIN_PASSWORD_HASH is required. Please set it in your environment variables.");
   process.exit(1);
 }
 
