@@ -15,6 +15,8 @@ export const submissions = pgTable("submissions", {
   priority: varchar("priority", { length: 20 }).notNull().default("medium"),
   assignedTo: varchar("assigned_to", { length: 255 }),
   category: varchar("category", { length: 100 }),
+  eventDate: varchar("event_date", { length: 10 }).notNull(),
+  eventTime: varchar("event_time", { length: 8 }),
   riskLevel: varchar("risk_level", { length: 20 }).notNull().default("low"),
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
 });
@@ -58,6 +60,8 @@ export const insertSubmissionSchema = createInsertSchema(submissions).pick({
   hospitalTrust: true,
   sha256Hash: true,
   category: true,
+  eventDate: true,
+  eventTime: true,
 });
 
 export const updateSubmissionSchema = createInsertSchema(submissions).pick({

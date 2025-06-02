@@ -24,6 +24,11 @@ const submissionSchema = z.object({
     "Please select a valid NHS hospital from the list"
   ),
   category: z.string().min(1, "Please select a category for your report"),
+  eventDate: z.string().min(1, "Please provide the date when the incident occurred").refine(
+    (val) => !isNaN(Date.parse(val)),
+    "Please provide a valid date"
+  ),
+  eventTime: z.string().optional(),
   message: z.string().min(10, "Message must be at least 10 characters").max(5000, "Message must be less than 5000 characters"),
   replyEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
   consentSubmission: z.boolean().refine((val) => val === true, {
@@ -50,6 +55,8 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
     defaultValues: {
       hospital: "",
       category: "",
+      eventDate: "",
+      eventTime: "",
       message: "",
       replyEmail: "",
       consentSubmission: false,
@@ -97,6 +104,8 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
         replyEmail: data.replyEmail || null,
         hospitalTrust: data.hospital || null,
         category: data.category,
+        eventDate: data.eventDate,
+        eventTime: data.eventTime || null,
         sha256Hash: "", // Will be generated on server
       };
 
@@ -175,6 +184,58 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
             </FormItem>
           )}
         />
+
+        {/* Event Date and Time */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Event Date */}
+          <FormField
+            control={form.control}
+            name="eventDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Date of Incident <span className="text-error">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    type="date"
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 hover:border-gray-400 hover:shadow-sm focus:scale-[1.01] focus:shadow-md"
+                  />
+                </FormControl>
+                <p className="text-xs text-gray-500 mt-1">
+                  When did this incident occur?
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Event Time */}
+          <FormField
+            control={form.control}
+            name="eventTime"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Time of Incident (Optional)
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    type="time"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 hover:border-gray-400 hover:shadow-sm focus:scale-[1.01] focus:shadow-md"
+                  />
+                </FormControl>
+                <p className="text-xs text-gray-500 mt-1">
+                  Approximate time if known
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {/* Message Input */}
         <FormField
