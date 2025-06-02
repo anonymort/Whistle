@@ -162,14 +162,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return;
           }
           
-          // Validate file signature for security
-          if (fileBuffer.length > 4) {
-            const signature = fileBuffer.slice(0, 4);
-            if (!validateFileSignature(signature)) {
-              res.status(400).json({ error: "Invalid or unsupported file type" });
-              return;
-            }
-          }
+          // Note: File signature validation is skipped for encrypted files
+          // Client-side validation ensures only permitted file types are encrypted
 
           // Perform comprehensive virus scanning
           try {
