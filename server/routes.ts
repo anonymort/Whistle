@@ -149,11 +149,7 @@ const requireAuth: RequestHandler = (req, res, next) => {
 };
 
 const requireInvestigatorAuth: RequestHandler = (req, res, next) => {
-  const session = req.session as Express.Session & {
-    isInvestigatorAuthenticated?: boolean;
-    investigatorId?: number;
-    userRole?: string;
-  };
+  const session = req.session as any;
   
   if (!session || !session.isInvestigatorAuthenticated || !session.investigatorId) {
     res.status(401).json({ error: "Investigator access required" });
@@ -203,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit encrypted whistleblowing report (with CSRF protection)
-  app.post("/api/submit", csrfProtection, async (req: Request, res: Response) => {
+  app.post("/api/submit", csrfProtection, async (req, res) => {
     try {
       // Validate request body
       const validatedData = insertSubmissionSchema.parse(req.body);
@@ -312,6 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ error: "Internal server error" });
+      return;
     }
   });
 
