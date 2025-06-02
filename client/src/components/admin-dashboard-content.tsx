@@ -466,37 +466,43 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                       const daysRemaining = calculateDaysRemaining(submission.submittedAt);
                       return (
                         <tr key={submission.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4 font-mono text-sm">#{submission.id}</td>
-                          <td className="py-3 px-4 text-sm">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 font-mono text-xs sm:text-sm">#{submission.id}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
                             {submission.hospitalTrust || 'Unknown'}
                           </td>
-                          <td className="py-3 px-4 text-sm">
-                            {formatDate(submission.submittedAt)}
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            <div className="flex flex-col">
+                              <span>{formatDate(submission.submittedAt)}</span>
+                              <span className="text-xs text-gray-500 sm:hidden">
+                                {submission.hospitalTrust || 'Unknown'}
+                              </span>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4">
                             {submission.encryptedFile ? (
-                              <Badge variant="secondary">Yes</Badge>
+                              <Badge variant="secondary" className="text-xs">Yes</Badge>
                             ) : (
-                              <Badge variant="outline">No</Badge>
+                              <Badge variant="outline" className="text-xs">No</Badge>
                             )}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden md:table-cell">
                             {submission.replyEmail ? (
-                              <Badge variant="secondary">Yes</Badge>
+                              <Badge variant="secondary" className="text-xs">Yes</Badge>
                             ) : (
-                              <Badge variant="outline">No</Badge>
+                              <Badge variant="outline" className="text-xs">No</Badge>
                             )}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4">
                             <Badge 
                               variant={daysRemaining <= 7 ? "destructive" : "outline"}
-                              className="flex items-center space-x-1 w-fit"
+                              className="flex items-center space-x-1 w-fit text-xs"
                             >
-                              <Clock className="w-3 h-3" />
-                              <span>{daysRemaining} days</span>
+                              <Clock className="w-2 h-2 sm:w-3 sm:h-3" />
+                              <span className="hidden sm:inline">{daysRemaining} days</span>
+                              <span className="sm:hidden">{daysRemaining}d</span>
                             </Badge>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4">
                             <div className="flex gap-1">
                               <Dialog>
                                 <DialogTrigger asChild>

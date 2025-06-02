@@ -162,3 +162,42 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+/* Responsive design utilities */
+@layer utilities {
+  /* Better responsive table handling */
+  .table-responsive {
+    @apply overflow-x-auto;
+  }
+  
+  /* Improved button sizing for mobile */
+  .btn-responsive {
+    @apply text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2;
+  }
+  
+  /* Container responsive padding */
+  .container-responsive {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Responsive text sizing */
+  .text-responsive {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+}
+
+/* Enhanced focus states for accessibility */
+@layer components {
+  .focus-enhanced:focus {
+    @apply outline-none ring-2 ring-primary ring-offset-2;
+  }
+  
+  /* Better mobile touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+}
