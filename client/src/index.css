@@ -31,6 +31,11 @@
   --success: 158 64% 52%; /* #059669 */
   --warning: 25 95% 53%; /* #D97706 */
   --error: 0 84% 60%; /* #DC2626 */
+  
+  /* Neon glow selection colors */
+  --neon-blue: 213 94% 68%; /* #3B82F6 */
+  --neon-cyan: 190 95% 39%; /* #0EA5E9 */
+  --neon-purple: 271 91% 65%; /* #8B5CF6 */
 }
 
 .dark {
@@ -74,6 +79,66 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold;
   }
+}
+
+/* Dynamic Neon Glow Text Selection Effects */
+::selection {
+  background: transparent;
+}
+
+::-moz-selection {
+  background: transparent;
+}
+
+.neon-selection {
+  position: relative;
+  overflow: visible;
+}
+
+.neon-selection::selection {
+  background: rgba(59, 130, 246, 0.15);
+  text-shadow: 
+    0 0 5px rgba(59, 130, 246, 0.8),
+    0 0 10px rgba(59, 130, 246, 0.6),
+    0 0 15px rgba(59, 130, 246, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.2);
+  animation: neonPulse 1.5s ease-in-out infinite;
+}
+
+.neon-selection::-moz-selection {
+  background: rgba(59, 130, 246, 0.15);
+  text-shadow: 
+    0 0 5px rgba(59, 130, 246, 0.8),
+    0 0 10px rgba(59, 130, 246, 0.6),
+    0 0 15px rgba(59, 130, 246, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.2);
+  animation: neonPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes neonPulse {
+  0%, 100% {
+    text-shadow: 
+      0 0 5px rgba(59, 130, 246, 0.8),
+      0 0 10px rgba(59, 130, 246, 0.6),
+      0 0 15px rgba(59, 130, 246, 0.4),
+      0 0 20px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    text-shadow: 
+      0 0 8px rgba(59, 130, 246, 1),
+      0 0 16px rgba(59, 130, 246, 0.8),
+      0 0 24px rgba(59, 130, 246, 0.6),
+      0 0 32px rgba(59, 130, 246, 0.4);
+  }
+}
+
+@keyframes neonFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.neon-glow-text {
+  animation: neonFlicker 2s ease-in-out infinite;
 }
 
 @layer utilities {
