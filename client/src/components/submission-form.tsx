@@ -153,13 +153,13 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                   {...field}
                   rows={6}
                   placeholder="Describe your concern in detail. Minimum 10 characters required."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none transition-all duration-300 hover:border-gray-400 hover:shadow-sm focus:scale-[1.01] focus:shadow-md"
                 />
               </FormControl>
               <div className="flex justify-between items-center">
                 <FormMessage />
-                <span className={`text-sm ${
-                  messageLength < 10 ? 'text-error' : 
+                <span className={`text-sm transition-all duration-300 ${
+                  messageLength < 10 ? 'text-error animate-pulse' : 
                   messageLength > 4000 ? 'text-warning' : 
                   'text-gray-500'
                 }`}>
@@ -196,7 +196,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                   {...field}
                   type="email"
                   placeholder="your-alias@anonaddy.me (for anonymous replies only)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 hover:border-gray-400 hover:shadow-sm focus:scale-[1.01] focus:shadow-md"
                 />
               </FormControl>
               <p className="text-xs text-gray-500 mt-1">
@@ -213,16 +213,16 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
             control={form.control}
             name="consentSubmission"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 group">
                 <FormControl>
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="mt-1 h-4 w-4"
+                    className="mt-1 h-4 w-4 transition-all duration-200 hover:scale-110 hover:shadow-md focus:scale-110 group-hover:animate-pulse"
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel className="text-sm text-gray-700">
+                  <FormLabel className="text-sm text-gray-700 cursor-pointer transition-colors duration-200 hover:text-primary">
                     I consent to submitting this anonymous report. I understand that my submission will be encrypted and stored securely for up to 90 days. <span className="text-error">*</span>
                   </FormLabel>
                   <FormMessage />
@@ -235,19 +235,19 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
             control={form.control}
             name="consentGdpr"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 group">
                 <FormControl>
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="mt-1 h-4 w-4"
+                    className="mt-1 h-4 w-4 transition-all duration-200 hover:scale-110 hover:shadow-md focus:scale-110 group-hover:animate-pulse"
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel className="text-sm text-gray-700">
+                  <FormLabel className="text-sm text-gray-700 cursor-pointer transition-colors duration-200 hover:text-primary">
                     I acknowledge that I have read and understand the{" "}
-                    <a href="#" className="text-primary hover:underline">Privacy Policy</a> and{" "}
-                    <a href="#" className="text-primary hover:underline">Data Retention Policy</a>. <span className="text-error">*</span>
+                    <a href="#" className="text-primary hover:underline transition-all duration-200 hover:scale-105">Privacy Policy</a> and{" "}
+                    <a href="#" className="text-primary hover:underline transition-all duration-200 hover:scale-105">Data Retention Policy</a>. <span className="text-error">*</span>
                   </FormLabel>
                   <FormMessage />
                 </div>
