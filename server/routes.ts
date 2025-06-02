@@ -323,6 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ status: "unhealthy", error: "Storage error" });
+      return;
     }
   });
 
@@ -337,6 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Purge error:", error);
       res.status(500).json({ error: "Purge operation failed" });
+      return;
     }
   });
 
@@ -406,6 +408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Admin login error:", error);
       res.status(500).json({ error: "Authentication failed" });
+      return;
     }
   });
 

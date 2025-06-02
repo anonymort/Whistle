@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import crypto from 'crypto';
 
 class AuditLogger {
   async log(entry: {
@@ -44,7 +45,6 @@ class AuditLogger {
   }
 
   private generateSessionId(userId: string, ipAddress?: string): string {
-    const crypto = require('crypto');
     return crypto.createHash('sha256')
       .update(`${userId}-${ipAddress}-${Date.now()}`)
       .digest('hex')
