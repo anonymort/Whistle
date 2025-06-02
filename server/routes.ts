@@ -9,6 +9,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
 import { verifyPassword } from "./auth";
+import { auditLogger, AUDIT_ACTIONS } from "./audit";
 
 // File signature validation for security
 function validateFileSignature(signature: Buffer): boolean {
@@ -255,12 +256,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         session.adminId = crypto.randomUUID();
         session.loginTime = new Date();
         
+        // Audit log successful login
+        auditLogger.log({
+          userId: username,
+          action: AUDIT_ACTIONS.ADMIN_LOGIN,
+          resource: 'admin_session',
+          details: { sessionId: session.adminId },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+        
         res.json({ 
           success: true, 
           message: "Authentication successful",
           sessionId: session.adminId
         });
       } else {
+        // Audit log failed login attempt
+        auditLogger.log({
+          userId: username || 'unknown',
+          action: 'admin_login_failed',
+          resource: 'admin_session',
+          details: { reason: 'invalid_credentials' },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+        
         res.status(401).json({ error: "Invalid credentials" });
       }
     } catch (error) {
@@ -298,7 +319,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin endpoints - all protected with authentication
   app.get("/api/admin/submissions", requireAdminAuth, async (req, res) => {
     try {
+      const session = req.session as any;
       const submissions = await storage.getAllSubmissions();
+      
+      // Audit log viewing submissions
+      auditLogger.log({
+        userId: session.adminId,
+        action: AUDIT_ACTIONS.VIEW_SUBMISSIONS,
+        resource: 'submissions',
+        details: { count: submissions.length },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.json(submissions);
     } catch (error) {
       console.error("Admin submissions error:", error);
