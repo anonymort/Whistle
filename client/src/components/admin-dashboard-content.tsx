@@ -520,8 +520,8 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                 <Shield className="text-white w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">WhistleLite Admin</h1>
-                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">NHS Whistleblowing Portal Management</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Whistle Admin</h1>
+                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">DAUK Whistleblowing Portal Management</p>
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3">

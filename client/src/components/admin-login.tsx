@@ -69,7 +69,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
           </div>
           <CardTitle className="text-2xl">Admin Access</CardTitle>
           <CardDescription>
-            Enter your admin credentials to access the WhistleLite management dashboard
+            Enter your admin credentials to access the Whistle management dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>

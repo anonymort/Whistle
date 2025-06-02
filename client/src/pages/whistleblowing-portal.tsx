@@ -24,8 +24,8 @@ export default function WhistleblowingPortal() {
                 <Shield className="text-white w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">WhistleLite</h1>
-                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">NHS Secure Anonymous Reporting Portal</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Whistle</h1>
+                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">DAUK Secure Anonymous Reporting Portal</p>
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3">
@@ -95,7 +95,7 @@ export default function WhistleblowingPortal() {
 
         {/* Footer */}
         <footer className="mt-12 text-center text-sm text-gray-500">
-          <p>&copy; 2024 NHS WhistleLite Portal. Built with privacy and security by design.</p>
+          <p>&copy; 2024 DAUK Whistle Portal. Built with privacy and security by design.</p>
           <div className="mt-2 space-x-4">
             <a href="/privacy-policy" className="hover:text-primary transition-colors duration-200">Privacy Policy</a>
             <a href="/terms-of-service" className="hover:text-primary transition-colors duration-200">Terms of Service</a>
