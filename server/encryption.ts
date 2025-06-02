@@ -2,25 +2,51 @@ import _sodium from 'libsodium-wrappers';
 
 let sodium: typeof _sodium | null = null;
 
-// Store keys in memory (in production, use secure key storage)
+// Secure key storage - check environment variables first, then generate if needed
 let adminEncryptionKeys: { publicKey: string; privateKey: string } | null = null;
 let adminSigningKeys: { publicKey: string; privateKey: string } | null = null;
+
+// Load keys from environment variables or generate new ones
+function loadOrGenerateKeys() {
+  // Try to load from environment variables first
+  if (process.env.ADMIN_ENCRYPTION_PUBLIC_KEY && process.env.ADMIN_ENCRYPTION_PRIVATE_KEY) {
+    adminEncryptionKeys = {
+      publicKey: process.env.ADMIN_ENCRYPTION_PUBLIC_KEY,
+      privateKey: process.env.ADMIN_ENCRYPTION_PRIVATE_KEY
+    };
+    console.log("Loaded admin encryption keys from environment variables");
+  }
+  
+  if (process.env.ADMIN_SIGNING_PUBLIC_KEY && process.env.ADMIN_SIGNING_PRIVATE_KEY) {
+    adminSigningKeys = {
+      publicKey: process.env.ADMIN_SIGNING_PUBLIC_KEY,
+      privateKey: process.env.ADMIN_SIGNING_PRIVATE_KEY
+    };
+    console.log("Loaded admin signing keys from environment variables");
+  }
+}
 
 export async function initializeServerEncryption(): Promise<boolean> {
   try {
     await _sodium.ready;
     sodium = _sodium;
     
-    // Initialize admin keys if not present
+    // Load keys from environment first
+    loadOrGenerateKeys();
+    
+    // Generate keys only if not loaded from environment
     if (!adminEncryptionKeys) {
       adminEncryptionKeys = await generateAdminKeyPair();
-      console.log("Generated new admin encryption keypair");
-      console.log("Public Key (share this with client):", adminEncryptionKeys.publicKey);
+      console.warn("⚠️  Generated new admin encryption keypair. For production, set ADMIN_ENCRYPTION_PUBLIC_KEY and ADMIN_ENCRYPTION_PRIVATE_KEY in environment variables.");
+      console.log("Public Key (add to environment):", adminEncryptionKeys.publicKey);
+      console.log("Private Key (add to environment):", adminEncryptionKeys.privateKey);
     }
     
     if (!adminSigningKeys) {
       adminSigningKeys = await generateAdminSigningKeyPair();
-      console.log("Generated new admin signing keypair");
+      console.warn("⚠️  Generated new admin signing keypair. For production, set ADMIN_SIGNING_PUBLIC_KEY and ADMIN_SIGNING_PRIVATE_KEY in environment variables.");
+      console.log("Signing Public Key (add to environment):", adminSigningKeys.publicKey);
+      console.log("Signing Private Key (add to environment):", adminSigningKeys.privateKey);
     }
     
     return true;

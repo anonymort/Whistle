@@ -3,6 +3,11 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import crypto from "crypto";
 
+// Security: Hash password function
+function hashPassword(password: string): string {
+  return crypto.pbkdf2Sync(password, process.env.SESSION_SECRET || 'fallback-salt', 100000, 64, 'sha512').toString('hex');
+}
+
 // Ensure required environment variables
 if (!process.env.SESSION_SECRET) {
   process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex');
