@@ -119,15 +119,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 24 * 60 * 60 * 1000); // 24 hours
 
-  // Submit encrypted whistleblowing report
-  app.post("/api/submit", async (req, res) => {
+  // Get CSRF token
+  app.get("/api/csrf-token", (req, res) => {
+    try {
+      const token = generateCSRFToken(req);
+      res.json({ csrfToken: token });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to generate CSRF token" });
+    }
+  });
+
+  // Submit encrypted whistleblowing report (with CSRF protection)
+  app.post("/api/submit", csrfProtection, async (req, res) => {
     try {
       // Validate request body
       const validatedData = insertSubmissionSchema.parse(req.body);
 
       // Additional validation
       if (!validatedData.encryptedMessage || validatedData.encryptedMessage.length < 10) {
-        return res.status(400).json({ error: "Invalid message content" });
+        res.status(400).json({ error: "Invalid message content" });
+        return;
       }
 
       // Enhanced file validation if present
@@ -138,27 +149,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Validate the encrypted data structure
           if (!encryptedData.data || !encryptedData.algorithm) {
-            return res.status(400).json({ error: "Invalid encrypted file structure." });
+            res.status(400).json({ error: "Invalid encrypted file structure." });
+            return;
           }
           
           const fileBuffer = Buffer.from(encryptedData.data, 'base64');
           
           // For very large encrypted payloads, reject regardless (4MB limit)
           if (fileBuffer.length > 4 * 1024 * 1024) {
-            return res.status(413).json({ error: "Encrypted file data too large." });
+            res.status(413).json({ error: "Encrypted file data too large." });
+            return;
           }
           
           // Validate file signature for security
           if (fileBuffer.length > 4) {
             const signature = fileBuffer.slice(0, 4);
             if (!validateFileSignature(signature)) {
-              return res.status(400).json({ error: "Invalid or unsupported file type" });
+              res.status(400).json({ error: "Invalid or unsupported file type" });
+              return;
             }
           }
           
         } catch (error) {
           console.error("File validation error:", error);
-          return res.status(400).json({ error: "Invalid encrypted file format." });
+          res.status(400).json({ error: "Invalid encrypted file format." });
+          return;
         }
       }
 
@@ -166,7 +181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (validatedData.replyEmail) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(validatedData.replyEmail)) {
-          return res.status(400).json({ error: "Invalid email format" });
+          res.status(400).json({ error: "Invalid email format" });
+          return;
         }
       }
 
@@ -197,7 +213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Submission error:", error);
       
       if (error instanceof Error && error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid submission data" });
+        res.status(400).json({ error: "Invalid submission data" });
+        return;
       }
       
       res.status(500).json({ error: "Internal server error" });
