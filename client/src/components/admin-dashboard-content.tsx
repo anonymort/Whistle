@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, Filter, X, Edit3, MessageSquare, User, Calendar, Flag, TrendingUp, CheckCircle, CircleX, AlertCircle, Pause } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, Filter, X, Edit3, MessageSquare, User, Calendar, Flag, TrendingUp, CheckCircle, CircleX, AlertCircle, Pause, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
