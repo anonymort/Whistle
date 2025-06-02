@@ -246,8 +246,8 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                 <div className="space-y-1 leading-none">
                   <FormLabel className="text-sm text-gray-700 cursor-pointer transition-colors duration-200 hover:text-primary">
                     I acknowledge that I have read and understand the{" "}
-                    <a href="#" className="text-primary hover:underline transition-all duration-200 hover:scale-105">Privacy Policy</a> and{" "}
-                    <a href="#" className="text-primary hover:underline transition-all duration-200 hover:scale-105">Data Retention Policy</a>. <span className="text-error">*</span>
+                    <a href="/privacy-policy" target="_blank" className="text-primary hover:underline transition-all duration-200 hover:scale-105">Privacy Policy</a> and{" "}
+                    <a href="/terms-of-service" target="_blank" className="text-primary hover:underline transition-all duration-200 hover:scale-105">Terms of Service</a>. <span className="text-error">*</span>
                   </FormLabel>
                   <FormMessage />
                 </div>
