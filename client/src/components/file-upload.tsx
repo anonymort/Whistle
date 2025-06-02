@@ -51,11 +51,18 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
       // Strip metadata from file
       const processedFile = await stripMetadata(file);
       
-      // Convert file to array buffer, then to base64 for encryption
-      const arrayBuffer = await processedFile.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('');
-      const base64Data = btoa(binaryString);
+      // Read file as base64 using FileReader (more reliable for binary files)
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Extract base64 data (remove data:mime;base64, prefix)
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(processedFile);
+      });
 
       // Create file info object with metadata
       const fileInfo = {
