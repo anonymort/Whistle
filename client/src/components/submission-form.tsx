@@ -67,10 +67,6 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Submission Successful",
-        description: "Your report has been securely submitted and encrypted.",
-      });
       form.reset();
       setSelectedFile(null);
       setEncryptedFile(null);
