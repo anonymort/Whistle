@@ -69,6 +69,8 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   const [noteType, setNoteType] = useState('general');
   const [newInvestigator, setNewInvestigator] = useState({ name: '', email: '', department: '' });
   const [editingInvestigator, setEditingInvestigator] = useState<Investigator | null>(null);
+  const [passwordDialog, setPasswordDialog] = useState<{ open: boolean; investigatorId?: number }>({ open: false });
+  const [newPassword, setNewPassword] = useState('');
   const itemsPerPage = 10;
   const { toast } = useToast();
 
@@ -222,6 +224,29 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
       toast({
         title: "Error",
         description: "Failed to update case.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Password management mutation
+  const setPasswordMutation = useMutation({
+    mutationFn: async ({ investigatorId, password }: { investigatorId: number; password: string }) => {
+      const response = await apiRequest("POST", `/api/admin/investigators/${investigatorId}/password`, { password });
+      return response.json();
+    },
+    onSuccess: () => {
+      setPasswordDialog({ open: false });
+      setNewPassword('');
+      toast({
+        title: "Password Set",
+        description: "Investigator password has been set successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to set password.",
         variant: "destructive",
       });
     },
@@ -1321,13 +1346,22 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                 </span>
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditingInvestigator(investigator)}
-                            >
-                              Edit
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingInvestigator(investigator)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setPasswordDialog({ open: true, investigatorId: investigator.id })}
+                              >
+                                Set Password
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>
