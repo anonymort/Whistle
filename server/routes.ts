@@ -365,7 +365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Logout error:", error);
       res.status(500).json({ error: "Logout failed" });
     }
-  });
+  }));
 
   // Check admin session status
   app.get("/api/admin/status", (req, res) => {
@@ -377,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoints - all protected with authentication
-  app.get("/api/admin/submissions", requireAdminAuth, async (req, res) => {
+  app.get("/api/admin/submissions", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
     try {
       const session = req.session as any;
       const submissions = await storage.getAllSubmissions();
@@ -397,9 +397,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Admin submissions error:", error);
       res.status(500).json({ error: "Failed to fetch submissions" });
     }
-  });
+  }));
 
-  app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
+  app.get("/api/admin/stats", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
     try {
       const submissionCount = await storage.getSubmissionCount();
       const virusStats = virusScanner.getStatistics();
@@ -424,9 +424,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Admin stats error:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
     }
-  });
+  }));
 
-  app.get("/api/admin/submission/:id", requireAdminAuth, async (req, res) => {
+  app.get("/api/admin/submission/:id", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
