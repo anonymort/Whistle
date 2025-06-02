@@ -34,6 +34,9 @@ export interface IStorage {
   getAllInvestigators(): Promise<Investigator[]>;
   createInvestigator(investigator: InsertInvestigator): Promise<Investigator>;
   updateInvestigator(id: number, investigator: Partial<InsertInvestigator>): Promise<Investigator>;
+  getInvestigatorByEmail(email: string): Promise<Investigator | undefined>;
+  getInvestigatorById(id: number): Promise<Investigator | undefined>;
+  getAssignedSubmissions(investigatorName: string): Promise<Submission[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -178,6 +181,31 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Failed to update investigator");
     }
     return investigator;
+  }
+
+  async getInvestigatorByEmail(email: string): Promise<Investigator | undefined> {
+    const [investigator] = await db
+      .select()
+      .from(investigators)
+      .where(eq(investigators.email, email));
+    return investigator;
+  }
+
+  async getInvestigatorById(id: number): Promise<Investigator | undefined> {
+    const [investigator] = await db
+      .select()
+      .from(investigators)
+      .where(eq(investigators.id, id));
+    return investigator;
+  }
+
+  async getAssignedSubmissions(investigatorName: string): Promise<Submission[]> {
+    const submissions = await db
+      .select()
+      .from(submissionTable)
+      .where(eq(submissionTable.assignedTo, investigatorName))
+      .orderBy(submissionTable.submittedAt);
+    return submissions;
   }
 }
 

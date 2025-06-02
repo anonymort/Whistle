@@ -45,6 +45,8 @@ export const investigators = pgTable("investigators", {
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
   department: varchar("department", { length: 255 }),
+  passwordHash: varchar("password_hash", { length: 255 }),
+  role: varchar("role", { length: 20 }).notNull().default("investigator"),
   isActive: varchar("is_active", { length: 10 }).notNull().default("true"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -77,6 +79,9 @@ export const insertInvestigatorSchema = createInsertSchema(investigators).pick({
   name: true,
   email: true,
   department: true,
+  passwordHash: true,
+  role: true,
+  isActive: true,
 });
 
 export const insertAuditLogSchema = createInsertSchema(auditLogs).pick({
@@ -117,6 +122,11 @@ export const NoteType = {
   COMMUNICATION: 'communication',
   DECISION: 'decision',
   ESCALATION: 'escalation'
+} as const;
+
+export const UserRole = {
+  ADMIN: 'admin',
+  INVESTIGATOR: 'investigator'
 } as const;
 
 export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
