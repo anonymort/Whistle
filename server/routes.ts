@@ -441,11 +441,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.deleteSubmission(id);
       
-      auditLogger.log({
+      await auditLogger.log({
         userId: (req.session as any).adminId,
         action: AUDIT_ACTIONS.DELETE_SUBMISSION,
         resource: 'submission',
-        details: { submissionId: id, originalHash: submission.sha256Hash }
+        details: { submissionId: id, originalHash: submission.sha256Hash },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
       });
       
       res.json({ message: "Submission deleted successfully" });
