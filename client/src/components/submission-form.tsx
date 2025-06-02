@@ -71,6 +71,9 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
       encryptedFile: string | null;
       replyEmail: string | null;
       hospitalTrust: string | null;
+      category: string;
+      eventDate: string;
+      eventTime: string | null;
       sha256Hash: string;
     }) => {
       const response = await apiRequest("POST", "/api/submit", payload);
