@@ -1,0 +1,93 @@
+I'll perform a comprehensive code review to identify critical errors in your NHS WhistleLite application. Let me examine the key areas systematically.
+Read file: server/routes.ts
+Read file: server/encryption.ts
+Read file: client/src/lib/encryption.ts
+Read file: server/index.ts
+Read file: client/src/components/admin-dashboard-content.tsx
+Read file: server/storage.ts
+## Critical Errors Identified
+
+After reviewing the codebase, I've identified several critical errors and security vulnerabilities:
+
+### 1. **CRITICAL: No Session Management/Authentication** 🔴
+The admin authentication is completely broken. The `/api/admin/login` endpoint returns success but doesn't create any session or authentication token. All admin endpoints are unprotected.
+
+```typescript
+// In server/routes.ts
+app.post("/api/admin/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (username === "admin" && password === "admin123") {
+    res.json({ success: true, message: "Login successful" }); // No session created!
+  }
+  // ...
+});
+```
+
+**Impact**: Anyone can access admin endpoints without authentication.
+
+### 2. **CRITICAL: Hardcoded Credentials** 🔴
+Admin credentials are hardcoded and visible in the code:
+- Username: `admin`
+- Password: `admin123`
+
+### 3. **CRITICAL: Admin Endpoints Unprotected** 🔴
+All admin endpoints (`/api/admin/*`) have no authentication middleware:
+- `/api/admin/submissions` - View all submissions
+- `/api/admin/decrypt` - Decrypt any submission
+- `/api/admin/rotate-keys` - Rotate encryption keys
+
+### 4. **CRITICAL: Key Storage in Memory** 🔴
+Encryption keys are stored in memory and lost on server restart:
+
+```typescript
+// In server/encryption.ts
+let adminEncryptionKeys: { publicKey: string; privateKey: string } | null = null;
+```
+
+**Impact**: New keys generated on each restart, making previous submissions undecryptable.
+
+### 5. **HIGH: Client-Side Admin State** 🟠
+The admin authentication state is managed only on the client side:
+
+```typescript
+// In admin-dashboard.tsx
+const [isAuthenticated, setIsAuthenticated] = useState(false);
+```
+
+**Impact**: Can be bypassed through browser console.
+
+### 6. **HIGH: File Download Vulnerability** 🟠
+The `/api/admin/download/:submissionId` endpoint has no authentication and allows downloading any file by ID.
+
+### 7. **MEDIUM: Missing CSRF Protection** 🟡
+No CSRF tokens implemented for state-changing operations.
+
+### 8. **MEDIUM: Inefficient Database Query** 🟡
+```typescript
+// In server/storage.ts
+async getSubmissionCount(): Promise<number> {
+  const result = await db.select().from(submissions); // Fetches all rows!
+  return result.length;
+}
+```
+Should use `COUNT(*)` instead.
+
+### 9. **LOW: Error Information Leakage** 🟢
+Some error messages expose internal details:
+```typescript
+throw new Error(`Unsupported encryption algorithm: ${encryptedData.algorithm}`);
+```
+
+### 10. **LOW: Missing Input Validation** 🟢
+The admin login endpoint doesn't validate if username/password are provided before checking them.
+
+## Immediate Actions Required
+
+1. **Implement proper session management** using express-session
+2. **Add authentication middleware** for all admin routes
+3. **Store encryption keys securely** (environment variables or key management service)
+4. **Remove hardcoded credentials**
+5. **Add CSRF protection**
+6. **Fix the database count query**
+
+Would you like me to fix these critical security vulnerabilities?

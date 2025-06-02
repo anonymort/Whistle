@@ -1,9 +1,11 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSubmissionSchema } from "@shared/schema";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
 
 // File signature validation for security
@@ -29,7 +31,7 @@ function validateFileSignature(signature: Buffer): boolean {
   );
 }
 
-// Rate limiter: 5 submissions per minute per IP
+// Rate limiters
 const submitRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5,
@@ -38,7 +40,57 @@ const submitRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+const adminLoginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Max 5 login attempts per 15 minutes
+  message: { error: "Too many login attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Session configuration
+function setupSession(app: Express) {
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable is required");
+  }
+
+  const sessionTtl = 4 * 60 * 60 * 1000; // 4 hours for admin sessions
+  const pgStore = connectPg(session);
+  
+  const sessionStore = new pgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true,
+    ttl: sessionTtl,
+    tableName: "admin_sessions",
+  });
+
+  app.use(session({
+    secret: process.env.SESSION_SECRET,
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: sessionTtl,
+      sameSite: 'strict'
+    },
+    name: 'whistlelite_admin_session'
+  }));
+}
+
+// Authentication middleware
+const requireAdminAuth: RequestHandler = (req, res, next) => {
+  const session = req.session as any;
+  if (!session || !session.isAdminAuthenticated || !session.adminId) {
+    return res.status(401).json({ error: "Unauthorized access" });
+  }
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup secure session management
+  setupSession(app);
   // Apply rate limiting to submission endpoint
   app.use("/api/submit", submitRateLimit);
 
@@ -159,25 +211,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin authentication
-  app.post("/api/admin/login", async (req, res) => {
+  // Admin authentication with proper session management
+  app.post("/api/admin/login", adminLoginRateLimit, async (req, res) => {
     try {
-      const { password } = req.body;
-      const adminPassword = process.env.ADMIN_PASSWORD || "admin123"; // Default for development
+      const { username, password } = req.body;
       
-      if (password === adminPassword) {
-        res.json({ success: true, message: "Login successful" });
+      // Validate input
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      // Get credentials from environment variables
+      const adminUsername = process.env.ADMIN_USERNAME;
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      
+      if (!adminUsername || !adminPassword) {
+        console.error("Admin credentials not configured in environment variables");
+        return res.status(500).json({ error: "Server configuration error" });
+      }
+      
+      // Verify credentials
+      if (username === adminUsername && password === adminPassword) {
+        // Create secure session
+        const session = req.session as any;
+        session.isAdminAuthenticated = true;
+        session.adminId = crypto.randomUUID();
+        session.loginTime = new Date();
+        
+        res.json({ 
+          success: true, 
+          message: "Authentication successful",
+          sessionId: session.adminId
+        });
       } else {
-        res.status(401).json({ error: "Invalid password" });
+        res.status(401).json({ error: "Invalid credentials" });
       }
     } catch (error) {
       console.error("Admin login error:", error);
-      res.status(500).json({ error: "Login failed" });
+      res.status(500).json({ error: "Authentication failed" });
     }
   });
 
-  // Admin endpoints
-  app.get("/api/admin/submissions", async (req, res) => {
+  // Admin logout
+  app.post("/api/admin/logout", requireAdminAuth, async (req, res) => {
+    try {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destruction error:", err);
+          return res.status(500).json({ error: "Logout failed" });
+        }
+        res.clearCookie('whistlelite_admin_session');
+        res.json({ success: true, message: "Logged out successfully" });
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ error: "Logout failed" });
+    }
+  });
+
+  // Check admin session status
+  app.get("/api/admin/status", (req, res) => {
+    const session = req.session as any;
+    res.json({ 
+      authenticated: !!(session && session.isAdminAuthenticated),
+      sessionId: session?.adminId || null
+    });
+  });
+
+  // Admin endpoints - all protected with authentication
+  app.get("/api/admin/submissions", requireAdminAuth, async (req, res) => {
     try {
       const submissions = await storage.getAllSubmissions();
       res.json(submissions);
@@ -187,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/stats", async (req, res) => {
+  app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
     try {
       const submissionCount = await storage.getSubmissionCount();
       res.json({ submissionCount });
@@ -197,9 +299,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/submission/:id", async (req, res) => {
+  app.get("/api/admin/submission/:id", requireAdminAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid submission ID" });
+      }
+      
       const submission = await storage.getSubmissionById(id);
       
       if (!submission) {
@@ -214,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Decrypt submission content for admin
-  app.post("/api/admin/decrypt", async (req, res) => {
+  app.post("/api/admin/decrypt", requireAdminAuth, async (req, res) => {
     try {
       const { encryptedData } = req.body;
       
