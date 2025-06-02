@@ -412,6 +412,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin authentication check
+  app.get("/api/admin/check-auth", async (req, res) => {
+    try {
+      const session = req.session as any;
+      if (session?.isAdminAuthenticated) {
+        res.json({ authenticated: true, sessionId: session.adminId });
+      } else {
+        res.status(401).json({ authenticated: false });
+      }
+    } catch (error) {
+      res.status(401).json({ authenticated: false });
+    }
+  });
+
   // Admin logout
   app.post("/api/admin/logout", requireAdminAuth, csrfProtection, async (req, res) => {
     try {
