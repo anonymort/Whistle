@@ -1,6 +1,6 @@
-import { submissions, type Submission, type InsertSubmission } from "@shared/schema";
+import { submissions, auditLogs, type Submission, type InsertSubmission, type AuditLog, type InsertAuditLog } from "@shared/schema";
 import { db } from "./db";
-import { eq, lt, sql } from "drizzle-orm";
+import { eq, lt, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   createSubmission(submission: InsertSubmission): Promise<Submission>;

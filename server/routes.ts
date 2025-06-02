@@ -238,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Data purge endpoint (for admin use)
-  app.post("/api/purge", async (req, res) => {
+  app.post("/api/purge", requireAdminAuth, csrfProtection, async (req, res) => {
     try {
       const purgedCount = await storage.purgeOldSubmissions();
       res.json({ 
@@ -411,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete submission
-  app.delete("/api/admin/submission/:id", requireAdminAuth, async (req, res) => {
+  app.delete("/api/admin/submission/:id", requireAdminAuth, csrfProtection, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -456,7 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Decrypt submission content for admin
-  app.post("/api/admin/decrypt", requireAdminAuth, async (req, res) => {
+  app.post("/api/admin/decrypt", requireAdminAuth, csrfProtection, async (req, res) => {
     try {
       const { encryptedData } = req.body;
       
