@@ -320,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin logout
-  app.post("/api/admin/logout", requireAdminAuth, async (req, res) => {
+  app.post("/api/admin/logout", requireAdminAuth, csrfProtection, async (req, res) => {
     try {
       req.session.destroy((err) => {
         if (err) {
@@ -535,7 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rotate admin keys (security endpoint)
-  app.post("/api/admin/rotate-keys", requireAdminAuth, async (req, res) => {
+  app.post("/api/admin/rotate-keys", requireAdminAuth, csrfProtection, async (req, res) => {
     try {
       const { rotateAdminKeys } = await import("./encryption");
       const newKeys = await rotateAdminKeys();
