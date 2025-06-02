@@ -162,51 +162,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return;
           }
           
-          // Validate file type based on mimetype
+          // Validate file type based on mimetype and extension
           const allowedTypes = [
             'application/pdf',
-            'image/jpeg',
-            'image/jpg', 
-            'image/png',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+            'application/msword', // .doc
+            'text/plain', // .txt
+            'text/csv' // .csv
           ];
           
-          if (!allowedTypes.includes(fileData.mimetype)) {
-            res.status(400).json({ error: "Unsupported file type." });
+          const allowedExtensions = ['.pdf', '.docx', '.pptx', '.doc', '.txt', '.csv'];
+          const fileExtension = fileData.filename.toLowerCase().substring(fileData.filename.lastIndexOf('.'));
+          
+          if (!allowedTypes.includes(fileData.mimetype) || !allowedExtensions.includes(fileExtension)) {
+            res.status(400).json({ error: "Unsupported file type. Only PDF, DOC, DOCX, PPT, CSV, and TXT files are allowed." });
             return;
           }
 
-          // Perform comprehensive virus scanning
-          try {
-            const virusScanResult = await virusScanner.scanFile(
-              fileBuffer, 
-              fileData.filename, 
-              'anonymous_user'
-            );
-
-            if (!virusScanResult.isClean) {
-              auditLogger.log({
-                userId: 'anonymous_user',
-                action: AUDIT_ACTIONS.SECURITY_THREAT_DETECTED,
-                resource: 'file_upload',
-                details: {
-                  threatName: virusScanResult.threatName,
-                  fileHash: virusScanResult.fileHash,
-                  scanEngine: virusScanResult.scanEngine,
-                  rejectedFile: true
-                }
-              });
-
-              res.status(400).json({ 
-                error: "File contains potentially malicious content and has been rejected for security reasons" 
-              });
-              return;
+          // Log file upload for audit trail
+          auditLogger.log({
+            userId: 'anonymous_user',
+            action: 'file_upload',
+            resource: 'submission',
+            details: {
+              filename: fileData.filename,
+              mimetype: fileData.mimetype,
+              size: fileData.size,
+              fileHash: require('crypto').createHash('sha256').update(fileBuffer).digest('hex')
             }
-          } catch (scanError) {
-            console.error("Virus scan failed:", scanError);
-            res.status(500).json({ error: "File security validation failed" });
-            return;
-          }
+          });
           
         } catch (error) {
           console.error("File validation error:", error);

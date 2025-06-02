@@ -158,7 +158,7 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
         ref={fileInputRef}
         type="file"
         onChange={handleFileChange}
-        accept=".pdf,.jpg,.jpeg,.png,.docx"
+        accept=".pdf,.doc,.docx,.pptx,.txt,.csv"
         className="hidden"
         disabled={isProcessing}
       />
@@ -185,7 +185,7 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
               <p className="text-sm text-gray-600">
                 <span className="font-medium text-primary">Click to upload</span> or drag and drop
               </p>
-              <p className="text-xs text-gray-500 mt-1">PDF, JPG, PNG, DOCX (max 2MB)</p>
+              <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, PPT, CSV, TXT (max 2MB)</p>
             </>
           )}
         </div>

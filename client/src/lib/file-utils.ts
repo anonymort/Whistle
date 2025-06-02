@@ -164,13 +164,17 @@ async function stripImageMetadata(file: File): Promise<File> {
 export function validateFileType(file: File): boolean {
   const allowedTypes = [
     'application/pdf',
-    'image/jpeg',
-    'image/jpg', 
-    'image/png',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+    'application/msword', // .doc
+    'text/plain', // .txt
+    'text/csv' // .csv
   ];
   
-  return allowedTypes.includes(file.type);
+  const allowedExtensions = ['.pdf', '.docx', '.pptx', '.doc', '.txt', '.csv'];
+  const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+  
+  return allowedTypes.includes(file.type) && allowedExtensions.includes(fileExtension);
 }
 
 export function validateFileSize(file: File, maxSizeBytes: number = 2 * 1024 * 1024): boolean {
