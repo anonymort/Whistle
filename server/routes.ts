@@ -67,12 +67,6 @@ function setupSession(app: Express) {
 // Authentication middleware
 const requireAdminAuth: RequestHandler = (req, res, next) => {
   const session = req.session as any;
-  console.log('Session check:', {
-    sessionExists: !!session,
-    isAdminAuthenticated: session?.isAdminAuthenticated,
-    adminId: session?.adminId,
-    userRole: session?.userRole
-  });
   
   if (!session || !session.isAdminAuthenticated || !session.adminId) {
     res.status(401).json({ error: "Unauthorized access" });
