@@ -58,11 +58,7 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
           const result = reader.result as string;
           // Extract base64 data (remove data:mime;base64, prefix)
           const base64 = result.split(',')[1];
-          if (base64) {
-            resolve(base64);
-          } else {
-            reject(new Error('Failed to extract base64 data'));
-          }
+          resolve(base64);
         };
         reader.onerror = reject;
         reader.readAsDataURL(processedFile);
@@ -130,17 +126,17 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
 
   if (selectedFile) {
     return (
-      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 transition-all duration-200 hover:shadow-sm">
+      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <File className="w-5 h-5 text-gray-400 transition-transform duration-200 hover:scale-110" />
+            <File className="w-5 h-5 text-gray-400" />
             <span className="text-sm text-gray-700 font-medium">{selectedFile.name}</span>
             <span className="text-xs text-gray-500">({formatFileSize(selectedFile.size)})</span>
           </div>
           <button
             type="button"
             onClick={handleRemoveFile}
-            className="text-error hover:text-red-700 transition-all duration-200 hover:scale-110 hover:rotate-90"
+            className="text-error hover:text-red-700 transition-colors"
             disabled={isProcessing}
           >
             <X className="w-4 h-4" />
@@ -171,25 +167,25 @@ export default function FileUpload({ onFileProcessed, onFileRemoved, selectedFil
         onClick={() => fileInputRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        className={`flex items-center justify-center w-full px-6 py-4 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-300 group ${
+        className={`flex items-center justify-center w-full px-6 py-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
           isProcessing 
             ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
-            : 'border-gray-300 hover:border-primary hover:bg-blue-50 hover:scale-[1.01] hover:shadow-md'
+            : 'border-gray-300 hover:border-primary hover:bg-blue-50'
         }`}
       >
         <div className="text-center">
           {isProcessing ? (
             <>
               <div className="w-6 h-6 border border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600 animate-pulse">Processing file...</p>
+              <p className="text-sm text-gray-600">Processing file...</p>
             </>
           ) : (
             <>
-              <CloudUpload className="w-8 h-8 text-gray-400 mx-auto mb-2 transition-all duration-200 group-hover:text-primary group-hover:scale-110" />
+              <CloudUpload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
               <p className="text-sm text-gray-600">
-                <span className="font-medium text-primary transition-colors duration-200 group-hover:text-blue-700">Click to upload</span> or drag and drop
+                <span className="font-medium text-primary">Click to upload</span> or drag and drop
               </p>
-              <p className="text-xs text-gray-500 mt-1 transition-colors duration-200 group-hover:text-gray-600">PDF, DOC, DOCX, PPT, CSV, TXT (max 2MB)</p>
+              <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, PPT, CSV, TXT (max 2MB)</p>
             </>
           )}
         </div>

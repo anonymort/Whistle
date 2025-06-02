@@ -120,7 +120,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 neon-selection">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Hospital Selection */}
         <FormField
           control={form.control}
@@ -261,16 +261,16 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
           <Button
             type="submit"
             disabled={submitMutation.isPending}
-            className="w-full bg-primary text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 hover:scale-[1.02] hover:shadow-lg focus:ring-4 focus:ring-blue-200 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none group"
+            className="w-full bg-primary text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitMutation.isPending ? (
               <>
                 <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
-                <span className="animate-pulse">Encrypting & Submitting...</span>
+                Encrypting & Submitting...
               </>
             ) : (
               <>
-                <Shield className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:rotate-12" />
+                <Shield className="w-4 h-4 mr-2" />
                 Submit Securely
               </>
             )}

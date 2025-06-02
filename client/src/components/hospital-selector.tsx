@@ -132,7 +132,7 @@ export default function HospitalSelector({
         {open && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto animate-in slide-in-from-top-2 duration-200"
+            className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
           >
             {filteredHospitals.length === 0 ? (
               <div className="p-4 text-sm text-gray-500 text-center">
@@ -145,7 +145,7 @@ export default function HospitalSelector({
                     key={`${hospital}-${index}`}
                     type="button"
                     className={cn(
-                      "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center justify-between transition-all duration-150 hover:scale-[1.01] hover:shadow-sm",
+                      "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center justify-between",
                       value === hospital && "bg-blue-50 text-blue-600"
                     )}
                     onClick={() => handleHospitalSelect(hospital)}
