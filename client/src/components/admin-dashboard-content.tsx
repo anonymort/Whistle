@@ -57,1388 +57,596 @@ interface AdminDashboardContentProps {
 }
 
 export default function AdminDashboardContent({ onLogout }: AdminDashboardContentProps) {
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [decryptedContent, setDecryptedContent] = useState<{[key: number]: string}>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<'date' | 'trust' | 'status' | 'priority'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedTrusts, setSelectedTrusts] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [editingCase, setEditingCase] = useState<Submission | null>(null);
-  const [caseNotes, setCaseNotes] = useState<{[key: number]: CaseNote[]}>({});
-  const [newNote, setNewNote] = useState('');
-  const [noteType, setNoteType] = useState('general');
-  const [newInvestigator, setNewInvestigator] = useState({ name: '', email: '', department: '' });
-  const [editingInvestigator, setEditingInvestigator] = useState<Investigator | null>(null);
-  const [passwordDialog, setPasswordDialog] = useState<{ open: boolean; investigatorId?: number }>({ open: false });
-  const [newPassword, setNewPassword] = useState('');
-  const itemsPerPage = 10;
   const { toast } = useToast();
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [decryptedData, setDecryptedData] = useState<{ message: string; fileName?: string; fileData?: string } | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [keyRotationDialogOpen, setKeyRotationDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [submissionToDelete, setSubmissionToDelete] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+  const [trustFilter, setTrustFilter] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState("newest");
 
-  const { data: submissions = [], isLoading, refetch } = useQuery({
+  // Data fetching queries
+  const { data: submissions = [], isLoading: submissionsLoading, refetch: refetchSubmissions } = useQuery({
     queryKey: ['/api/admin/submissions'],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/admin/submissions");
-      const data = await response.json();
-      return data.map((s: any) => ({
-        ...s,
-        submittedAt: new Date(s.submittedAt),
-        lastUpdated: s.lastUpdated ? new Date(s.lastUpdated) : new Date(s.submittedAt)
-      }));
-    }
   });
 
-  const { data: investigators = [] } = useQuery({
+  const { data: investigators = [], isLoading: investigatorsLoading, refetch: refetchInvestigators } = useQuery({
     queryKey: ['/api/admin/investigators'],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/admin/investigators");
-      return response.json();
-    }
   });
 
-  // Case Management Mutations
-  const updateCaseMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
-      const response = await apiRequest("PATCH", `/api/admin/submission/${id}`, updates);
-      return response.json();
+  const { data: caseNotes = [], refetch: refetchCaseNotes } = useQuery({
+    queryKey: ['/api/admin/case-notes', selectedSubmission?.id],
+    enabled: !!selectedSubmission?.id,
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['/api/admin/stats'],
+  });
+
+  // Mutations
+  const decryptMutation = useMutation({
+    mutationFn: async (encryptedData: string) => {
+      const response = await apiRequest(`/api/admin/decrypt`, {
+        method: 'POST',
+        body: { encryptedData },
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      setDecryptedData(data);
+      setDetailsDialogOpen(true);
+    },
+    onError: (error) => {
+      toast({
+        title: "Decryption failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest(`/api/admin/submissions/${id}`, {
+        method: 'DELETE',
+      });
     },
     onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Submission deleted successfully",
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
-      toast({
-        title: "Case Updated",
-        description: "Case details updated successfully.",
-      });
-      setEditingCase(null);
+      setDeleteConfirmOpen(false);
+      setSubmissionToDelete(null);
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to update case.",
+        title: "Delete failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const addNoteMutation = useMutation({
-    mutationFn: async ({ submissionId, note, noteType }: { submissionId: number; note: string; noteType: string }) => {
-      const response = await apiRequest("POST", `/api/admin/submission/${submissionId}/notes`, {
-        note,
-        noteType,
-        isInternal: 'true'
+  const updateSubmissionMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
+      await apiRequest(`/api/admin/submissions/${id}`, {
+        method: 'PATCH',
+        body: updates,
       });
-      return response.json();
-    },
-    onSuccess: (data, variables) => {
-      const submissionId = variables.submissionId;
-      setCaseNotes(prev => ({
-        ...prev,
-        [submissionId]: [data, ...(prev[submissionId] || [])]
-      }));
-      setNewNote('');
-      toast({
-        title: "Note Added",
-        description: "Case note added successfully.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to add note.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Investigator Management Mutations
-  const createInvestigatorMutation = useMutation({
-    mutationFn: async (investigator: { name: string; email: string; department: string }) => {
-      const response = await apiRequest("POST", "/api/admin/investigators", investigator);
-      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/investigators'] });
-      setNewInvestigator({ name: '', email: '', department: '' });
       toast({
-        title: "Investigator Added",
-        description: "New investigator has been created successfully.",
+        title: "Success",
+        description: "Submission updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
-    onError: () => {
+  });
+
+  const createInvestigatorMutation = useMutation({
+    mutationFn: async (data: { name: string; email: string; department: string; password: string }) => {
+      await apiRequest('/api/admin/investigators', {
+        method: 'POST',
+        body: data,
+      });
+    },
+    onSuccess: () => {
       toast({
-        title: "Error",
-        description: "Failed to create investigator.",
+        title: "Success",
+        description: "Investigator created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/investigators'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Creation failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
   const updateInvestigatorMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
-      const response = await apiRequest("PATCH", `/api/admin/investigators/${id}`, updates);
-      return response.json();
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      await apiRequest(`/api/admin/investigators/${id}`, {
+        method: 'PATCH',
+        body: data,
+      });
     },
     onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Investigator updated successfully",
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/investigators'] });
-      setEditingInvestigator(null);
-      toast({
-        title: "Investigator Updated",
-        description: "Investigator details updated successfully.",
-      });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to update investigator.",
+        title: "Update failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Enhanced case update with email notification
-  const updateCaseWithNotificationMutation = useMutation({
-    mutationFn: async ({ id, updates, previousAssignee }: { id: number; updates: any; previousAssignee?: string }) => {
-      const response = await apiRequest("PATCH", `/api/admin/submission/${id}`, updates);
-      
-      // Send email notification if assignee changed
-      if (updates.assignedTo && updates.assignedTo !== previousAssignee && updates.assignedTo !== "unassigned") {
-        try {
-          await apiRequest("POST", "/api/admin/notify-assignment", {
-            submissionId: id,
-            investigatorName: updates.assignedTo
-          });
-        } catch (error) {
-          console.warn("Failed to send email notification:", error);
-        }
-      }
-      
-      return response.json();
+  const createCaseNoteMutation = useMutation({
+    mutationFn: async (data: { submissionId: number; note: string; noteType: string; isInternal: string }) => {
+      await apiRequest('/api/admin/case-notes', {
+        method: 'POST',
+        body: data,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
       toast({
-        title: "Case Updated",
-        description: "Case details updated and investigator notified.",
+        title: "Success",
+        description: "Note added successfully",
       });
-      setEditingCase(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/case-notes', selectedSubmission?.id] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to update case.",
+        title: "Failed to add note",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Password management mutation
-  const setPasswordMutation = useMutation({
-    mutationFn: async ({ investigatorId, password }: { investigatorId: number; password: string }) => {
-      const response = await apiRequest("POST", `/api/admin/investigators/${investigatorId}/password`, { password });
-      return response.json();
+  const deleteCaseNoteMutation = useMutation({
+    mutationFn: async (noteId: number) => {
+      await apiRequest(`/api/admin/case-notes/${noteId}`, {
+        method: 'DELETE',
+      });
     },
     onSuccess: () => {
-      setPasswordDialog({ open: false });
-      setNewPassword('');
       toast({
-        title: "Password Set",
-        description: "Investigator password has been set successfully.",
+        title: "Success",
+        description: "Note deleted successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/case-notes', selectedSubmission?.id] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to set password.",
+        title: "Failed to delete note",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Utility functions for case management
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'new': return <CircleX className="h-4 w-4 text-blue-500" />;
-      case 'under_review': return <Eye className="h-4 w-4 text-yellow-500" />;
-      case 'investigating': return <AlertCircle className="h-4 w-4 text-orange-500" />;
-      case 'resolved': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'closed': return <Pause className="h-4 w-4 text-gray-500" />;
-      default: return <CircleX className="h-4 w-4 text-gray-400" />;
-    }
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'new': return 'default';
-      case 'under_review': return 'secondary';
-      case 'investigating': return 'destructive';
-      case 'resolved': return 'outline';
-      case 'closed': return 'secondary';
-      default: return 'secondary';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'text-red-600 bg-red-50';
-      case 'high': return 'text-orange-600 bg-orange-50';
-      case 'medium': return 'text-yellow-600 bg-yellow-50';
-      case 'low': return 'text-green-600 bg-green-50';
-      default: return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  const fetchCaseNotes = async (submissionId: number) => {
-    if (!caseNotes[submissionId]) {
-      try {
-        const response = await apiRequest("GET", `/api/admin/submission/${submissionId}/notes`);
-        const notes = await response.json();
-        setCaseNotes(prev => ({
-          ...prev,
-          [submissionId]: notes.map((n: any) => ({ ...n, createdAt: new Date(n.createdAt) }))
-        }));
-      } catch (error) {
-        console.error("Failed to fetch case notes:", error);
-      }
-    }
-  };
-
-  const { data: stats } = useQuery({
-    queryKey: ['/api/admin/stats'],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/admin/stats");
-      return response.json();
-    }
-  });
-
-  const purgeMutation = useMutation({
+  const keyRotationMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/purge");
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Purge Complete",
-        description: `Removed ${data.purgedCount} old submissions`,
+      await apiRequest('/api/admin/rotate-keys', {
+        method: 'POST',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
-    },
-    onError: () => {
-      toast({
-        title: "Purge Failed",
-        description: "Unable to purge old submissions",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const deleteSubmissionMutation = useMutation({
-    mutationFn: async (submissionId: number) => {
-      const response = await apiRequest("DELETE", `/api/admin/submission/${submissionId}`);
-      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
-      
-      // Fix pagination when deleting last item on current page
-      const newTotalItems = submissions.length - 1;
-      const newTotalPages = Math.ceil(newTotalItems / itemsPerPage);
-      if (currentPage > newTotalPages && newTotalPages > 0) {
-        setCurrentPage(newTotalPages);
-      }
-      
       toast({
-        title: "Submission Deleted",
-        description: "The submission and associated files have been permanently removed",
+        title: "Success",
+        description: "Encryption keys rotated successfully",
       });
+      setKeyRotationDialogOpen(false);
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Delete Failed",
-        description: "Unable to delete submission",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const decryptMutation = useMutation({
-    mutationFn: async (encryptedData: string) => {
-      const response = await apiRequest("POST", "/api/admin/decrypt", {
-        encryptedData
-      });
-      return response.json();
-    },
-    onSuccess: (data, encryptedData) => {
-      // Find the submission ID that matches this encrypted data
-      const submission = submissions.find((s: Submission) => s.encryptedMessage === encryptedData);
-      if (submission) {
-        setDecryptedContent(prev => ({
-          ...prev,
-          [submission.id]: data.decryptedText
-        }));
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Decryption Failed",
-        description: "Unable to decrypt submission content",
+        title: "Key rotation failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
+  // Event handlers
   const handleDecrypt = (submission: Submission) => {
-    if (!decryptedContent[submission.id]) {
+    setSelectedSubmission(submission);
+    const submission_ = submissions.find((s: Submission) => s.encryptedMessage === submission.encryptedMessage);
+    if (submission_) {
       decryptMutation.mutate(submission.encryptedMessage);
     }
   };
 
-  const { data: publicKey } = useQuery({
-    queryKey: ['/api/admin/public-key'],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/admin/public-key");
-      return response.json();
-    }
-  });
+  const handleDelete = (id: number) => {
+    setSubmissionToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
 
-  const rotateKeysMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/admin/rotate-keys");
-      return response.json();
-    },
-    onSuccess: (data) => {
+  const handleViewNotes = (submission: Submission) => {
+    setSelectedSubmission(submission);
+    setNotesDialogOpen(true);
+  };
+
+  const handleAssign = (submissionId: number, investigatorName: string) => {
+    updateSubmissionMutation.mutate({
+      id: submissionId,
+      updates: { assignedTo: investigatorName }
+    });
+  };
+
+  const handleStatusChange = (submissionId: number, status: string) => {
+    updateSubmissionMutation.mutate({
+      id: submissionId,
+      updates: { status }
+    });
+  };
+
+  const handlePriorityChange = (submissionId: number, priority: string) => {
+    updateSubmissionMutation.mutate({
+      id: submissionId,
+      updates: { priority }
+    });
+  };
+
+  const handleDownloadFile = (fileData: string, fileName: string) => {
+    try {
+      const byteCharacters = atob(fileData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray]);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
       toast({
-        title: "Keys Rotated",
-        description: "Encryption keys have been rotated successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/public-key'] });
-    },
-    onError: () => {
-      toast({
-        title: "Key Rotation Failed",
-        description: "Unable to rotate encryption keys",
+        title: "Download failed",
+        description: "Failed to download file",
         variant: "destructive",
       });
-    },
-  });
-
-  const formatDate = (date: Date) => {
-    return format(date, "MMM dd, yyyy 'at' HH:mm");
-  };
-
-  const calculateDaysRemaining = (submissionDate: Date) => {
-    const ninetyDaysLater = new Date(submissionDate);
-    ninetyDaysLater.setDate(ninetyDaysLater.getDate() + 90);
-    const now = new Date();
-    const diffTime = ninetyDaysLater.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
-
-  // Advanced filtering with status and priority
-  const filteredSubmissions = submissions.filter((submission: Submission) => {
-    // Trust filter
-    const trustMatch = selectedTrusts.length === 0 || 
-      selectedTrusts.includes(submission.hospitalTrust || 'Unknown');
-    
-    // Status filter
-    const statusMatch = statusFilter === 'all' || submission.status === statusFilter;
-    
-    // Priority filter  
-    const priorityMatch = priorityFilter === 'all' || submission.priority === priorityFilter;
-    
-    return trustMatch && statusMatch && priorityMatch;
-  });
-
-  // Enhanced sorting with status and priority options
-  const sortedSubmissions = [...filteredSubmissions].sort((a: Submission, b: Submission) => {
-    let comparison = 0;
-    
-    switch (sortBy) {
-      case 'trust':
-        const aName = a.hospitalTrust || 'Unknown';
-        const bName = b.hospitalTrust || 'Unknown';
-        comparison = aName.localeCompare(bName);
-        break;
-      case 'status':
-        const statusOrder = ['new', 'under_review', 'investigating', 'resolved', 'closed'];
-        const aStatusIndex = statusOrder.indexOf(a.status);
-        const bStatusIndex = statusOrder.indexOf(b.status);
-        comparison = aStatusIndex - bStatusIndex;
-        break;
-      case 'priority':
-        const priorityOrder = ['critical', 'high', 'medium', 'low'];
-        const aPriorityIndex = priorityOrder.indexOf(a.priority);
-        const bPriorityIndex = priorityOrder.indexOf(b.priority);
-        comparison = aPriorityIndex - bPriorityIndex;
-        break;
-      default: // date
-        const aDate = new Date(a.submittedAt).getTime();
-        const bDate = new Date(b.submittedAt).getTime();
-        comparison = aDate - bDate;
-        break;
     }
-    
-    return sortOrder === 'asc' ? comparison : -comparison;
+  };
+
+  const clearFilters = () => {
+    setStatusFilter([]);
+    setPriorityFilter([]);
+    setTrustFilter([]);
+    setCategoryFilter([]);
+    setSortBy("newest");
+  };
+
+  // Data processing
+  const filteredSubmissions = submissions.filter((submission: Submission) => {
+    if (statusFilter.length > 0 && !statusFilter.includes(submission.status)) return false;
+    if (priorityFilter.length > 0 && !priorityFilter.includes(submission.priority)) return false;
+    if (trustFilter.length > 0 && !trustFilter.includes(submission.hospitalTrust || 'Unknown')) return false;
+    if (categoryFilter.length > 0 && !categoryFilter.includes(submission.category || 'uncategorized')) return false;
+    return true;
   });
+
+  const sortedSubmissions = [...filteredSubmissions].sort((a: Submission, b: Submission) => {
+    switch (sortBy) {
+      case 'oldest':
+        return new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
+      case 'priority':
+        const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+        return (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+      case 'status':
+        return a.status.localeCompare(b.status);
+      case 'trust':
+        return (a.hospitalTrust || '').localeCompare(b.hospitalTrust || '');
+      case 'newest':
+      default:
+        return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+    }
+  });
+
+  const availableTrusts = Array.from(new Set(
+    submissions.map((s: Submission) => s.hospitalTrust || 'Unknown')
+  )).sort();
 
   const totalPages = Math.ceil(sortedSubmissions.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSubmissions = sortedSubmissions.slice(startIndex, startIndex + itemsPerPage);
 
-  // Get unique hospital trusts for filter dropdown
-  const uniqueTrusts = Array.from(new Set(
-    submissions.map((s: Submission) => s.hospitalTrust || 'Unknown')
-  )).sort() as string[];
-
-  const handleSort = (newSortBy: 'date' | 'trust' | 'status' | 'priority') => {
-    if (sortBy === newSortBy) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(newSortBy);
-      setSortOrder('desc');
-    }
-    setCurrentPage(1);
-  };
-
-  const handleDelete = (submissionId: number) => {
-    if (window.confirm('Are you sure you want to permanently delete this submission? This action cannot be undone.')) {
-      deleteSubmissionMutation.mutate(submissionId);
-    }
-  };
+  if (submissionsLoading || investigatorsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-bg-soft">
+    <div className="space-y-6">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Shield className="text-white w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Whistle Admin</h1>
-                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">DAUK Whistleblowing Portal Management</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <Button
-                onClick={() => purgeMutation.mutate()}
-                disabled={purgeMutation.isPending}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2 text-xs sm:text-sm"
-              >
-                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Purge Old Data</span>
-                <span className="sm:hidden">Purge</span>
-              </Button>
-              <Button
-                onClick={onLogout}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2 text-xs sm:text-sm"
-              >
-                <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>Logout</span>
-              </Button>
-            </div>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-300">Manage submissions and investigators</p>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Enhanced Stats Cards with Case Management Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.submissionCount || 0}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">New Cases</CardTitle>
-              <CircleX className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter((s: Submission) => s.status === 'new').length}
+        <div className="flex items-center space-x-4">
+          <Dialog open={keyRotationDialogOpen} onOpenChange={setKeyRotationDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center space-x-2">
+                <Key className="w-4 h-4" />
+                <span>Rotate Keys</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Rotate Encryption Keys</DialogTitle>
+                <DialogDescription>
+                  This will generate new encryption keys. This is a security measure that should be performed regularly.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setKeyRotationDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={() => keyRotationMutation.mutate()} disabled={keyRotationMutation.isPending}>
+                  {keyRotationMutation.isPending ? "Rotating..." : "Rotate Keys"}
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            </DialogContent>
+          </Dialog>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Investigating</CardTitle>
-              <AlertCircle className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter((s: Submission) => s.status === 'investigating').length}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Critical Priority</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter((s: Submission) => s.priority === 'critical').length}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">With Files</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter((s: Submission) => s.encryptedFile).length}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter((s: Submission) => calculateDaysRemaining(s.submittedAt) <= 7).length}
-              </div>
-            </CardContent>
-          </Card>
+          <Button onClick={onLogout} variant="outline" className="flex items-center space-x-2">
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </Button>
         </div>
+      </div>
 
-        {/* Tabs for different admin functions */}
-        <Tabs defaultValue="submissions" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="submissions">Submissions</TabsTrigger>
-            <TabsTrigger value="investigators">Investigators</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="submissions">
-            <Card>
-              <CardHeader>
-                <CardTitle>Submissions Management</CardTitle>
-                <CardDescription>
-                  All submissions are encrypted and will be automatically deleted after 90 days
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* Enhanced Sorting and filtering controls with Case Management */}
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <Button
-                      variant={sortBy === 'date' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleSort('date')}
-                      className="text-xs sm:text-sm"
-                    >
-                      <span className="hidden sm:inline">Sort by Date</span>
-                      <span className="sm:hidden">Date</span>
-                      {sortBy === 'date' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
-                    </Button>
-                    <Button
-                      variant={sortBy === 'status' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleSort('status')}
-                      className="text-xs sm:text-sm"
-                    >
-                      <span className="hidden sm:inline">Sort by Status</span>
-                      <span className="sm:hidden">Status</span>
-                      {sortBy === 'status' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
-                    </Button>
-                    <Button
-                      variant={sortBy === 'priority' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleSort('priority')}
-                      className="text-xs sm:text-sm"
-                    >
-                      <span className="hidden sm:inline">Sort by Priority</span>
-                      <span className="sm:hidden">Priority</span>
-                      {sortBy === 'priority' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
-                    </Button>
-                    <Button
-                      variant={sortBy === 'trust' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleSort('trust')}
-                      className="text-xs sm:text-sm"
-                    >
-                      <span className="hidden sm:inline">Sort by Trust</span>
-                      <span className="sm:hidden">Trust</span>
-                      {sortBy === 'trust' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
-                    </Button>
-                    
-                    {/* Hospital Trust Filter */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2 text-xs sm:text-sm"
-                        >
-                          <Filter className="w-3 h-3 sm:w-4 sm:h-4" />
-                          <span className="hidden sm:inline">Filter by Trust</span>
-                          <span className="sm:hidden">Filter</span>
-                          {selectedTrusts.length > 0 && (
-                            <Badge variant="secondary" className="ml-1 text-xs">
-                              {selectedTrusts.length}
-                            </Badge>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">Select Hospital Trusts</span>
-                            {selectedTrusts.length > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSelectedTrusts([])}
-                                className="h-6 px-2"
-                              >
-                                <X className="w-3 h-3" />
-                                Clear
-                              </Button>
-                            )}
-                          </div>
-                          <div className="max-h-48 overflow-y-auto space-y-1">
-                            {(uniqueTrusts as string[]).map((trust: string) => (
-                              <div key={trust} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={trust}
-                                  checked={selectedTrusts.includes(trust)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedTrusts([...selectedTrusts, trust]);
-                                    } else {
-                                      setSelectedTrusts(selectedTrusts.filter(t => t !== trust));
-                                    }
-                                  }}
-                                  className="h-4 w-4"
-                                />
-                                <label 
-                                  htmlFor={trust}
-                                  className="text-sm cursor-pointer truncate flex-1"
-                                  title={trust}
-                                >
-                                  {trust}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-
-                    {/* Status Filter */}
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[140px] h-8 text-xs">
-                        <SelectValue placeholder="All Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="under_review">Under Review</SelectItem>
-                        <SelectItem value="investigating">Investigating</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {/* Priority Filter */}
-                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                      <SelectTrigger className="w-[140px] h-8 text-xs">
-                        <SelectValue placeholder="All Priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Priority</SelectItem>
-                        <SelectItem value="critical">Critical</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, sortedSubmissions.length)} of {sortedSubmissions.length} cases
-                    {(selectedTrusts.length > 0 || statusFilter !== 'all' || priorityFilter !== 'all') && (
-                      <span className="text-blue-600 ml-1">(filtered)</span>
-                    )}
-                  </div>
-                </div>
-
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-gray-500 mt-2">Loading submissions...</p>
-              </div>
-            ) : submissions.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No submissions found</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[800px]">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">ID</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Status</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Priority</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">Hospital Trust</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden lg:table-cell">Event Date</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Submitted</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">File</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Assigned To</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Days Left</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedSubmissions.map((submission: Submission) => {
-                      const daysRemaining = calculateDaysRemaining(submission.submittedAt);
-                      const assignedInvestigator = investigators.find((investigator: Investigator) => investigator.name === submission.assignedTo);
-                      return (
-                        <tr key={submission.id} className="border-b hover:bg-gray-50">
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 font-mono text-xs sm:text-sm">#{submission.id}</td>
-                          
-                          {/* Status Column */}
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(submission.status)}
-                              <Badge variant={getStatusBadgeVariant(submission.status) as any} className="text-xs">
-                                {submission.status.replace('_', ' ').toUpperCase()}
-                              </Badge>
-                            </div>
-                          </td>
-                          
-                          {/* Priority Column */}
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
-                            <Badge className={`text-xs ${getPriorityColor(submission.priority)}`}>
-                              {submission.priority.toUpperCase()}
-                            </Badge>
-                          </td>
-                          
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
-                            {submission.hospitalTrust || 'Unknown'}
-                          </td>
-                          
-                          {/* Event Date Column */}
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden lg:table-cell">
-                            <div className="flex flex-col">
-                              <span>{submission.eventDate ? new Date(submission.eventDate).toLocaleDateString() : 'Not specified'}</span>
-                              {submission.eventTime && (
-                                <span className="text-xs text-gray-500">{submission.eventTime}</span>
-                              )}
-                            </div>
-                          </td>
-                          
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
-                            <div className="flex flex-col">
-                              <span>{formatDate(submission.submittedAt)}</span>
-                              <span className="text-xs text-gray-500 sm:hidden">
-                                {submission.hospitalTrust || 'Unknown'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4">
-                            {submission.encryptedFile ? (
-                              <Badge variant="secondary" className="text-xs">Yes</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">No</Badge>
-                            )}
-                          </td>
-                          {/* Assigned To Column */}
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">
-                            {assignedInvestigator ? (
-                              <div className="flex items-center gap-1">
-                                <User className="w-3 h-3 text-gray-400" />
-                                <span className="text-xs">{assignedInvestigator.name}</span>
-                              </div>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">Unassigned</Badge>
-                            )}
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4">
-                            <Badge 
-                              variant={daysRemaining <= 7 ? "destructive" : "outline"}
-                              className="flex items-center space-x-1 w-fit text-xs"
-                            >
-                              <Clock className="w-2 h-2 sm:w-3 sm:h-3" />
-                              <span className="hidden sm:inline">{daysRemaining} days</span>
-                              <span className="sm:hidden">{daysRemaining}d</span>
-                            </Badge>
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4">
-                            <div className="flex gap-1">
-                              {/* Case Management Button */}
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setEditingCase(submission);
-                                      fetchCaseNotes(submission.id);
-                                    }}
-                                    className="text-xs"
-                                  >
-                                    <Settings className="w-3 h-3" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                                  <DialogHeader>
-                                    <DialogTitle>Case Management - #{submission.id}</DialogTitle>
-                                    <DialogDescription>
-                                      Submitted: {formatDate(submission.submittedAt)} | Trust: {submission.hospitalTrust || 'Unknown'}
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  
-                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    {/* Case Details */}
-                                    <div className="space-y-4">
-                                      <h3 className="font-semibold">Case Details</h3>
-                                      
-                                      <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                          <Label>Status</Label>
-                                          <Select 
-                                            value={editingCase?.status || submission.status}
-                                            onValueChange={(value) => 
-                                              setEditingCase(prev => prev ? {...prev, status: value} : null)
-                                            }
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="new">New</SelectItem>
-                                              <SelectItem value="under_review">Under Review</SelectItem>
-                                              <SelectItem value="investigating">Investigating</SelectItem>
-                                              <SelectItem value="resolved">Resolved</SelectItem>
-                                              <SelectItem value="closed">Closed</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        
-                                        <div>
-                                          <Label>Priority</Label>
-                                          <Select 
-                                            value={editingCase?.priority || submission.priority}
-                                            onValueChange={(value) => 
-                                              setEditingCase(prev => prev ? {...prev, priority: value} : null)
-                                            }
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="low">Low</SelectItem>
-                                              <SelectItem value="medium">Medium</SelectItem>
-                                              <SelectItem value="high">High</SelectItem>
-                                              <SelectItem value="critical">Critical</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        
-                                        <div className="col-span-2">
-                                          <Label>Assign to Investigator</Label>
-                                          <Select 
-                                            value={editingCase?.assignedTo || submission.assignedTo || "unassigned"}
-                                            onValueChange={(value) => 
-                                              setEditingCase(prev => prev ? {...prev, assignedTo: value === "unassigned" ? null : value} : null)
-                                            }
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select investigator" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                                              {investigators.map((investigator: Investigator) => (
-                                                <SelectItem key={investigator.id} value={investigator.name}>{investigator.name} - {investigator.department}</SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        
-                                        <div className="col-span-2">
-                                          <Label>Category</Label>
-                                          <Select 
-                                            value={editingCase?.category || submission.category || "uncategorized"}
-                                            onValueChange={(value) => 
-                                              setEditingCase(prev => prev ? {...prev, category: value === "uncategorized" ? null : value} : null)
-                                            }
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="uncategorized">Not categorized</SelectItem>
-                                              <SelectItem value="patient_safety">Patient Safety</SelectItem>
-                                              <SelectItem value="clinical_governance">Clinical Governance</SelectItem>
-                                              <SelectItem value="financial_irregularity">Financial Irregularity</SelectItem>
-                                              <SelectItem value="data_protection">Data Protection</SelectItem>
-                                              <SelectItem value="staff_conduct">Staff Conduct</SelectItem>
-                                              <SelectItem value="discrimination">Discrimination</SelectItem>
-                                              <SelectItem value="other">Other</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </div>
-                                      
-                                      <Button 
-                                        onClick={() => {
-                                          if (editingCase) {
-                                            updateCaseWithNotificationMutation.mutate({
-                                              id: submission.id,
-                                              updates: {
-                                                status: editingCase.status,
-                                                priority: editingCase.priority,
-                                                assignedTo: editingCase.assignedTo === "unassigned" ? null : editingCase.assignedTo,
-                                                category: editingCase.category === "uncategorized" ? null : editingCase.category
-                                              },
-                                              previousAssignee: submission.assignedTo ?? undefined
-                                            });
-                                          }
-                                        }}
-                                        disabled={updateCaseWithNotificationMutation.isPending}
-                                        className="w-full"
-                                      >
-                                        Update Case Details
-                                      </Button>
-                                    </div>
-                                    
-                                    {/* Case Notes */}
-                                    <div className="space-y-4">
-                                      <h3 className="font-semibold">Case Notes</h3>
-                                      
-                                      {/* Add Note Form */}
-                                      <div className="border rounded-lg p-4 space-y-4">
-                                        <div>
-                                          <Label>Note Type</Label>
-                                          <Select value={noteType} onValueChange={setNoteType}>
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="general">General</SelectItem>
-                                              <SelectItem value="investigation">Investigation</SelectItem>
-                                              <SelectItem value="follow_up">Follow Up</SelectItem>
-                                              <SelectItem value="resolution">Resolution</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        
-                                        <div>
-                                          <Label>Note</Label>
-                                          <textarea
-                                            value={newNote}
-                                            onChange={(e) => setNewNote(e.target.value)}
-                                            placeholder="Add a case note..."
-                                            className="w-full p-2 border rounded-md resize-none"
-                                            rows={3}
-                                          />
-                                        </div>
-                                        
-                                        <Button 
-                                          onClick={() => {
-                                            if (newNote.trim()) {
-                                              addNoteMutation.mutate({
-                                                submissionId: submission.id,
-                                                note: newNote.trim(),
-                                                noteType
-                                              });
-                                            }
-                                          }}
-                                          disabled={!newNote.trim() || addNoteMutation.isPending}
-                                          size="sm"
-                                        >
-                                          Add Note
-                                        </Button>
-                                      </div>
-                                      
-                                      {/* Existing Notes */}
-                                      <div className="space-y-2 max-h-96 overflow-y-auto">
-                                        {(caseNotes[submission.id] || []).map((note: any) => (
-                                          <div key={note.id} className="border rounded-lg p-3 bg-gray-50">
-                                            <div className="flex justify-between items-start mb-2">
-                                              <Badge variant="outline" className="text-xs">
-                                                {note.noteType.replace('_', ' ').toUpperCase()}
-                                              </Badge>
-                                              <span className="text-xs text-gray-500">
-                                                {format(note.createdAt, 'MMM dd, yyyy HH:mm')}
-                                              </span>
-                                            </div>
-                                            <p className="text-sm">{note.note}</p>
-                                            <p className="text-xs text-gray-500 mt-1">by {note.createdBy}</p>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                              
-                              {/* View Details Button */}
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setSelectedSubmission(submission)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                </DialogTrigger>
-                              <DialogContent className="max-w-2xl">
-                                <DialogHeader>
-                                  <DialogTitle>Submission Details</DialogTitle>
-                                  <DialogDescription>
-                                    Submission #{submission.id} - {formatDate(submission.submittedAt)}
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-700">SHA256 Hash:</label>
-                                    <p className="text-xs font-mono bg-gray-100 p-2 rounded mt-1 break-all">
-                                      {submission.sha256Hash}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-700">Message Content:</label>
-                                    {decryptedContent[submission.id] ? (
-                                      <div className="bg-green-50 border border-green-200 rounded mt-1 p-3">
-                                        <p className="text-sm text-gray-800 whitespace-pre-wrap">
-                                          {decryptedContent[submission.id]}
-                                        </p>
-                                      </div>
-                                    ) : (
-                                      <div className="bg-gray-50 border border-gray-200 rounded mt-1 p-3">
-                                        <p className="text-xs text-gray-500 mb-2">Content is encrypted</p>
-                                        <Button
-                                          onClick={() => handleDecrypt(submission)}
-                                          disabled={decryptMutation.isPending}
-                                          size="sm"
-                                          className="bg-blue-600 hover:bg-blue-700"
-                                        >
-                                          {decryptMutation.isPending ? "Decrypting..." : "Decrypt Content"}
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {submission.encryptedFile && (
-                                    <div>
-                                      <label className="text-sm font-medium text-gray-700">Attached File:</label>
-                                      <div className="flex items-center space-x-2 mt-1">
-                                        <p className="text-xs text-gray-500 bg-gray-100 p-2 rounded flex-1">
-                                          File attached ({submission.encryptedFile.length} characters)
-                                        </p>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => window.open(`/api/admin/download/${submission.id}`, '_blank')}
-                                          className="text-xs"
-                                        >
-                                          <Download className="w-3 h-3 mr-1" />
-                                          Download
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {submission.replyEmail && (
-                                    <div>
-                                      <label className="text-sm font-medium text-gray-700">Reply Email:</label>
-                                      <p className="text-sm text-gray-600 mt-1">{submission.replyEmail}</p>
-                                    </div>
-                                  )}
-                                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                    <div className="flex items-center space-x-2">
-                                      <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                                      <span className="text-sm font-medium text-yellow-800">Auto-Delete Warning</span>
-                                    </div>
-                                    <p className="text-sm text-yellow-700 mt-1">
-                                      This submission will be automatically deleted in {daysRemaining} days 
-                                      ({format(new Date(submission.submittedAt.getTime() + 90 * 24 * 60 * 60 * 1000), "MMM dd, yyyy")})
-                                    </p>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(submission.id)}
-                              disabled={deleteSubmissionMutation.isPending}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                    <div className="text-sm text-gray-500">
-                      Page {currentPage} of {totalPages}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="investigators">
-            <Card>
-              <CardHeader>
-                <CardTitle>Investigator Management</CardTitle>
-                <CardDescription>
-                  Manage investigators who can be assigned to cases. When assigned, they will receive email notifications.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Add New Investigator */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="text-lg font-semibold mb-4">Add New Investigator</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="name">Name</Label>
-                      <Input
-                        id="name"
-                        value={newInvestigator.name}
-                        onChange={(e) => setNewInvestigator(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="Full name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={newInvestigator.email}
-                        onChange={(e) => setNewInvestigator(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="email@nhs.uk"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="department">Department</Label>
-                      <Input
-                        id="department"
-                        value={newInvestigator.department}
-                        onChange={(e) => setNewInvestigator(prev => ({ ...prev, department: e.target.value }))}
-                        placeholder="e.g. Patient Safety"
-                      />
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={() => createInvestigatorMutation.mutate(newInvestigator)}
-                    disabled={createInvestigatorMutation.isPending || !newInvestigator.name || !newInvestigator.email}
-                    className="mt-4"
-                  >
-                    Add Investigator
-                  </Button>
-                </div>
-
-                {/* Existing Investigators */}
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-8 h-8 text-blue-600" />
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Current Investigators</h3>
-                  <div className="grid gap-4">
-                    {investigators.map((investigator: Investigator) => (
-                      <div key={investigator.id} className="border rounded-lg p-4">
-                        {editingInvestigator?.id === investigator.id ? (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div>
-                                <Label>Name</Label>
-                                <Input
-                                  value={editingInvestigator.name}
-                                  onChange={(e) => setEditingInvestigator(prev => 
-                                    prev ? { ...prev, name: e.target.value } : null
-                                  )}
-                                />
-                              </div>
-                              <div>
-                                <Label>Email</Label>
-                                <Input
-                                  type="email"
-                                  value={editingInvestigator.email}
-                                  onChange={(e) => setEditingInvestigator(prev => 
-                                    prev ? { ...prev, email: e.target.value } : null
-                                  )}
-                                />
-                              </div>
-                              <div>
-                                <Label>Department</Label>
-                                <Input
-                                  value={editingInvestigator.department || ''}
-                                  onChange={(e) => setEditingInvestigator(prev => 
-                                    prev ? { ...prev, department: e.target.value } : null
-                                  )}
-                                />
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => updateInvestigatorMutation.mutate({
-                                  id: investigator.id,
-                                  updates: {
-                                    name: editingInvestigator.name,
-                                    email: editingInvestigator.email,
-                                    department: editingInvestigator.department
-                                  }
-                                })}
-                                disabled={updateInvestigatorMutation.isPending}
-                              >
-                                Save
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingInvestigator(null)}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-semibold">{investigator.name}</h4>
-                              <p className="text-sm text-gray-600">{investigator.email}</p>
-                              {investigator.department && (
-                                <p className="text-sm text-gray-500">{investigator.department}</p>
-                              )}
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  investigator.isActive === 'yes' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {investigator.isActive === 'yes' ? 'Active' : 'Inactive'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingInvestigator(investigator)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => setPasswordDialog({ open: true, investigatorId: investigator.id })}
-                              >
-                                Set Password
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-sm text-muted-foreground">Total</p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-8 h-8 text-blue-600" />
+                <div>
+                  <p className="text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'new').length}</p>
+                  <p className="text-sm text-muted-foreground">New</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Settings className="w-8 h-8 text-purple-600" />
+                <div>
+                  <p className="text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'investigating').length}</p>
+                  <p className="text-sm text-muted-foreground">Investigating</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+                <div>
+                  <p className="text-2xl font-bold">{submissions.filter((s: Submission) => s.priority === 'critical').length}</p>
+                  <p className="text-sm text-muted-foreground">Critical</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-8 h-8 text-orange-600" />
+                <div>
+                  <p className="text-2xl font-bold">{submissions.filter((s: Submission) => {
+                    const now = new Date();
+                    const daysDiff = Math.ceil((now.getTime() - new Date(s.submittedAt).getTime()) / (1000 * 60 * 60 * 24));
+                    return Math.max(0, 20 - daysDiff) <= 7;
+                  }).length}</p>
+                  <p className="text-sm text-muted-foreground">Urgent</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-          <TabsContent value="analytics">
-            <AnalyticsDashboard submissions={submissions} investigators={investigators} />
-          </TabsContent>
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="submissions" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="submissions">Submissions</TabsTrigger>
+          <TabsTrigger value="investigators">Investigators</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="security">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Key className="w-5 h-5" />
-                    <span>Encryption Management</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Manage encryption keys and security settings
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Current Public Key:</label>
-                    <p className="text-xs font-mono bg-gray-100 p-2 rounded mt-1 break-all">
-                      {publicKey?.publicKey || 'Loading...'}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
+        <TabsContent value="submissions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Submissions ({sortedSubmissions.length})</CardTitle>
+                  <CardDescription>Manage and review all submissions</CardDescription>
+                </div>
+                <SubmissionFilters
+                  statusFilter={statusFilter}
+                  priorityFilter={priorityFilter}
+                  trustFilter={trustFilter}
+                  categoryFilter={categoryFilter}
+                  sortBy={sortBy}
+                  availableTrusts={availableTrusts}
+                  onStatusFilterChange={setStatusFilter}
+                  onPriorityFilterChange={setPriorityFilter}
+                  onTrustFilterChange={setTrustFilter}
+                  onCategoryFilterChange={setCategoryFilter}
+                  onSortByChange={setSortBy}
+                  onClearFilters={clearFilters}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SubmissionList
+                submissions={sortedSubmissions}
+                investigators={investigators}
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                onDecrypt={handleDecrypt}
+                onDelete={handleDelete}
+                onViewNotes={handleViewNotes}
+                onAssign={handleAssign}
+                onStatusChange={handleStatusChange}
+                onPriorityChange={handlePriorityChange}
+              />
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, sortedSubmissions.length)} of {sortedSubmissions.length} submissions
+                  </p>
+                  <div className="flex items-center space-x-2">
                     <Button
-                      onClick={() => rotateKeysMutation.mutate()}
-                      disabled={rotateKeysMutation.isPending}
                       variant="outline"
-                      className="flex items-center space-x-2"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
                     >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>{rotateKeysMutation.isPending ? 'Rotating...' : 'Rotate Keys'}</span>
+                      <ChevronLeft className="w-4 h-4" />
+                      Previous
+                    </Button>
+                    <span className="text-sm">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
-                  
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
-                      <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                      <span className="text-sm font-medium text-yellow-800">Key Rotation Warning</span>
-                    </div>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Rotating keys will invalidate all existing encrypted submissions. Only rotate if necessary for security.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </main>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="investigators">
+          <InvestigatorManagement
+            investigators={investigators}
+            onCreateInvestigator={(data) => createInvestigatorMutation.mutate(data)}
+            onUpdateInvestigator={(id, data) => updateInvestigatorMutation.mutate({ id, data })}
+            isCreating={createInvestigatorMutation.isPending}
+            isUpdating={updateInvestigatorMutation.isPending}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <AnalyticsDashboard submissions={submissions} investigators={investigators} />
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialogs */}
+      <SubmissionDetails
+        isOpen={detailsDialogOpen}
+        onClose={() => {
+          setDetailsDialogOpen(false);
+          setDecryptedData(null);
+        }}
+        submission={selectedSubmission}
+        decryptedData={decryptedData}
+        investigators={investigators}
+        onAssign={handleAssign}
+        onStatusChange={handleStatusChange}
+        onPriorityChange={handlePriorityChange}
+        onDownloadFile={handleDownloadFile}
+        isUpdating={updateSubmissionMutation.isPending}
+      />
+
+      <CaseNotesPanel
+        isOpen={notesDialogOpen}
+        onClose={() => setNotesDialogOpen(false)}
+        submission={selectedSubmission}
+        caseNotes={caseNotes}
+        onAddNote={(data) => createCaseNoteMutation.mutate(data)}
+        onDeleteNote={(noteId) => deleteCaseNoteMutation.mutate(noteId)}
+        isAdding={createCaseNoteMutation.isPending}
+        isDeleting={deleteCaseNoteMutation.isPending}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this submission? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => submissionToDelete && deleteMutation.mutate(submissionToDelete)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
