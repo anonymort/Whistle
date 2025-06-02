@@ -15,6 +15,7 @@ interface Submission {
   encryptedMessage: string;
   encryptedFile: string | null;
   replyEmail: string | null;
+  hospitalTrust: string | null;
   sha256Hash: string;
   submittedAt: Date;
 }
@@ -26,6 +27,10 @@ interface AdminDashboardContentProps {
 export default function AdminDashboardContent({ onLogout }: AdminDashboardContentProps) {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [decryptedContent, setDecryptedContent] = useState<{[key: number]: string}>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState<'date' | 'trust'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const itemsPerPage = 10;
   const { toast } = useToast();
 
   const { data: submissions = [], isLoading, refetch } = useQuery({
@@ -70,6 +75,28 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
     }
   });
 
+  const deleteSubmissionMutation = useMutation({
+    mutationFn: async (submissionId: number) => {
+      const response = await apiRequest("DELETE", `/api/admin/submission/${submissionId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      toast({
+        title: "Submission Deleted",
+        description: "The submission has been permanently removed",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Unable to delete submission",
+        variant: "destructive",
+      });
+    }
+  });
+
   const decryptMutation = useMutation({
     mutationFn: async (encryptedData: string) => {
       const response = await apiRequest("POST", "/api/admin/decrypt", {
@@ -79,7 +106,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
     },
     onSuccess: (data, encryptedData) => {
       // Find the submission ID that matches this encrypted data
-      const submission = submissions.find(s => s.encryptedMessage === encryptedData);
+      const submission = submissions.find((s: Submission) => s.encryptedMessage === encryptedData);
       if (submission) {
         setDecryptedContent(prev => ({
           ...prev,
@@ -142,6 +169,48 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
     const diffTime = ninetyDaysLater.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
+  };
+
+  // Sort and paginate submissions
+  const sortedSubmissions = [...submissions].sort((a: Submission, b: Submission) => {
+    if (sortBy === 'trust') {
+      const aName = a.hospitalTrust || 'Unknown';
+      const bName = b.hospitalTrust || 'Unknown';
+      if (sortOrder === 'asc') {
+        return aName.localeCompare(bName);
+      } else {
+        return bName.localeCompare(aName);
+      }
+    } else {
+      // Sort by date
+      const aDate = new Date(a.submittedAt).getTime();
+      const bDate = new Date(b.submittedAt).getTime();
+      if (sortOrder === 'asc') {
+        return aDate - bDate;
+      } else {
+        return bDate - aDate;
+      }
+    }
+  });
+
+  const totalPages = Math.ceil(sortedSubmissions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedSubmissions = sortedSubmissions.slice(startIndex, startIndex + itemsPerPage);
+
+  const handleSort = (newSortBy: 'date' | 'trust') => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('desc');
+    }
+    setCurrentPage(1);
+  };
+
+  const handleDelete = (submissionId: number) => {
+    if (window.confirm('Are you sure you want to permanently delete this submission? This action cannot be undone.')) {
+      deleteSubmissionMutation.mutate(submissionId);
+    }
   };
 
   return (
@@ -242,12 +311,35 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
           <TabsContent value="submissions">
             <Card>
               <CardHeader>
-                <CardTitle>Recent Submissions</CardTitle>
+                <CardTitle>Submissions Management</CardTitle>
                 <CardDescription>
                   All submissions are encrypted and will be automatically deleted after 90 days
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Sorting and pagination controls */}
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex gap-2">
+                    <Button
+                      variant={sortBy === 'date' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSort('date')}
+                    >
+                      Sort by Date {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </Button>
+                    <Button
+                      variant={sortBy === 'trust' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSort('trust')}
+                    >
+                      Sort by Trust {sortBy === 'trust' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </Button>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, submissions.length)} of {submissions.length} submissions
+                  </div>
+                </div>
+
             {isLoading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -264,6 +356,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-3 px-4">ID</th>
+                      <th className="text-left py-3 px-4">Hospital Trust</th>
                       <th className="text-left py-3 px-4">Submitted</th>
                       <th className="text-left py-3 px-4">Has File</th>
                       <th className="text-left py-3 px-4">Reply Email</th>
@@ -272,11 +365,14 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                     </tr>
                   </thead>
                   <tbody>
-                    {submissions.map((submission: Submission) => {
+                    {paginatedSubmissions.map((submission: Submission) => {
                       const daysRemaining = calculateDaysRemaining(submission.submittedAt);
                       return (
                         <tr key={submission.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4 font-mono text-sm">#{submission.id}</td>
+                          <td className="py-3 px-4 text-sm">
+                            {submission.hospitalTrust || 'Unknown'}
+                          </td>
                           <td className="py-3 px-4 text-sm">
                             {formatDate(submission.submittedAt)}
                           </td>
