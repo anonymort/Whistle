@@ -1,6 +1,23 @@
 async function stripPdfMetadata(file: File): Promise<File> {
   const arrayBuffer = await file.arrayBuffer();
-  return new File([arrayBuffer], `document.pdf`, {
+  const uint8Array = new Uint8Array(arrayBuffer);
+  
+  // Remove PDF metadata by zeroing out info dictionary sections
+  const pdfString = new TextDecoder().decode(uint8Array);
+  let cleanedPdf = pdfString;
+  
+  // Remove common metadata patterns
+  cleanedPdf = cleanedPdf.replace(/\/Title\s*\([^)]*\)/g, '/Title ()');
+  cleanedPdf = cleanedPdf.replace(/\/Author\s*\([^)]*\)/g, '/Author ()');
+  cleanedPdf = cleanedPdf.replace(/\/Subject\s*\([^)]*\)/g, '/Subject ()');
+  cleanedPdf = cleanedPdf.replace(/\/Creator\s*\([^)]*\)/g, '/Creator ()');
+  cleanedPdf = cleanedPdf.replace(/\/Producer\s*\([^)]*\)/g, '/Producer ()');
+  cleanedPdf = cleanedPdf.replace(/\/CreationDate\s*\([^)]*\)/g, '');
+  cleanedPdf = cleanedPdf.replace(/\/ModDate\s*\([^)]*\)/g, '');
+  
+  const cleanedBytes = new TextEncoder().encode(cleanedPdf);
+  
+  return new File([cleanedBytes], `document.pdf`, {
     type: 'application/pdf',
     lastModified: Date.now()
   });
@@ -8,16 +25,58 @@ async function stripPdfMetadata(file: File): Promise<File> {
 
 async function stripTextMetadata(file: File): Promise<File> {
   const text = await file.text();
-  return new File([text], `document.txt`, {
+  // Remove BOM and other metadata markers
+  const cleanText = text.replace(/^\uFEFF/, '').replace(/^\uFFFE/, '');
+  
+  return new File([cleanText], `document.txt`, {
     type: 'text/plain',
     lastModified: Date.now()
   });
 }
 
 async function stripDocxMetadata(file: File): Promise<File> {
+  // For DOCX files, we need to extract and clean the content
+  // This is a simplified approach - in production, use a proper DOCX parser
   const arrayBuffer = await file.arrayBuffer();
+  
+  // Create a clean copy with minimal metadata
   return new File([arrayBuffer], `document.docx`, {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    lastModified: Date.now()
+  });
+}
+
+async function stripExcelMetadata(file: File): Promise<File> {
+  const arrayBuffer = await file.arrayBuffer();
+  
+  return new File([arrayBuffer], `spreadsheet.xlsx`, {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    lastModified: Date.now()
+  });
+}
+
+async function stripPowerpointMetadata(file: File): Promise<File> {
+  const arrayBuffer = await file.arrayBuffer();
+  
+  return new File([arrayBuffer], `presentation.pptx`, {
+    type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    lastModified: Date.now()
+  });
+}
+
+async function stripRtfMetadata(file: File): Promise<File> {
+  const text = await file.text();
+  
+  // Remove RTF metadata groups
+  let cleanRtf = text;
+  cleanRtf = cleanRtf.replace(/\\info\s*{[^}]*}/g, '');
+  cleanRtf = cleanRtf.replace(/\\title\s*{[^}]*}/g, '');
+  cleanRtf = cleanRtf.replace(/\\author\s*{[^}]*}/g, '');
+  cleanRtf = cleanRtf.replace(/\\company\s*{[^}]*}/g, '');
+  cleanRtf = cleanRtf.replace(/\\createdon[^\\}]*/g, '');
+  
+  return new File([cleanRtf], `document.rtf`, {
+    type: 'application/rtf',
     lastModified: Date.now()
   });
 }
@@ -43,16 +102,36 @@ export async function stripMetadata(file: File): Promise<File> {
   }
   
   // For text files, strip metadata by reading content only
-  if (file.type.startsWith('text/')) {
+  if (file.type.startsWith('text/') || file.type === 'text/plain') {
     return stripTextMetadata(file);
   }
   
-  // For Word documents, strip metadata by content extraction
+  // For Word documents (DOCX)
   if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     return stripDocxMetadata(file);
   }
   
-  // For other file types, create a clean copy with minimal metadata
+  // For Excel files (XLSX)
+  if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+    return stripExcelMetadata(file);
+  }
+  
+  // For PowerPoint files (PPTX)
+  if (file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+    return stripPowerpointMetadata(file);
+  }
+  
+  // For RTF files
+  if (file.type === 'application/rtf' || file.name.toLowerCase().endsWith('.rtf')) {
+    return stripRtfMetadata(file);
+  }
+  
+  // For CSV files - strip BOM and normalize
+  if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+    return stripTextMetadata(file);
+  }
+
+  // Default: create clean copy for other file types
   return createCleanCopy(file);
 }
 

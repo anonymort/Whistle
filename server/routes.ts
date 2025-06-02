@@ -12,6 +12,7 @@ import { verifyPassword } from "./auth";
 import { auditLogger, AUDIT_ACTIONS } from "./audit";
 import { generateCSRFToken, csrfProtection } from "./csrf";
 import { errorHandler, asyncHandler, ValidationError, AuthenticationError } from "./error-handler";
+import { virusScanner } from "./virus-scanner";
 
 // File signature validation for security
 function validateFileSignature(signature: Buffer): boolean {
