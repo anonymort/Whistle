@@ -97,10 +97,10 @@ export default function WhistleblowingPortal() {
         <footer className="mt-12 text-center text-sm text-gray-500">
           <p>&copy; 2024 NHS WhistleLite Portal. Built with privacy and security by design.</p>
           <div className="mt-2 space-x-4">
-            <a href="#" className="hover:text-primary">Privacy Policy</a>
-            <a href="#" className="hover:text-primary">Terms of Service</a>
-            <a href="#" className="hover:text-primary">Contact Support</a>
-            <a href="/admin" className="hover:text-primary">Admin Dashboard</a>
+            <a href="/privacy-policy" className="hover:text-primary transition-colors duration-200">Privacy Policy</a>
+            <a href="/terms-of-service" className="hover:text-primary transition-colors duration-200">Terms of Service</a>
+            <a href="/contact" className="hover:text-primary transition-colors duration-200">Contact Support</a>
+            <a href="/admin" className="hover:text-primary transition-colors duration-200">Admin Dashboard</a>
           </div>
         </footer>
       </main>
