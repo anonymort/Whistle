@@ -83,11 +83,42 @@
 
 /* Dynamic Neon Glow Text Selection Effects */
 ::selection {
-  background: transparent;
+  background: rgba(59, 130, 246, 0.15);
+  text-shadow: 
+    0 0 5px rgba(59, 130, 246, 0.8),
+    0 0 10px rgba(59, 130, 246, 0.6),
+    0 0 15px rgba(59, 130, 246, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.2);
 }
 
 ::-moz-selection {
-  background: transparent;
+  background: rgba(59, 130, 246, 0.15);
+  text-shadow: 
+    0 0 5px rgba(59, 130, 246, 0.8),
+    0 0 10px rgba(59, 130, 246, 0.6),
+    0 0 15px rgba(59, 130, 246, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+/* Enhanced neon selection for specific elements */
+input::selection, textarea::selection, p::selection, span::selection, label::selection {
+  background: rgba(59, 130, 246, 0.2);
+  text-shadow: 
+    0 0 8px rgba(59, 130, 246, 1),
+    0 0 16px rgba(59, 130, 246, 0.8),
+    0 0 24px rgba(59, 130, 246, 0.6),
+    0 0 32px rgba(59, 130, 246, 0.4);
+  animation: neonPulse 1.5s ease-in-out infinite;
+}
+
+input::-moz-selection, textarea::-moz-selection, p::-moz-selection, span::-moz-selection, label::-moz-selection {
+  background: rgba(59, 130, 246, 0.2);
+  text-shadow: 
+    0 0 8px rgba(59, 130, 246, 1),
+    0 0 16px rgba(59, 130, 246, 0.8),
+    0 0 24px rgba(59, 130, 246, 0.6),
+    0 0 32px rgba(59, 130, 246, 0.4);
+  animation: neonPulse 1.5s ease-in-out infinite;
 }
 
 .neon-selection {
@@ -96,40 +127,61 @@
 }
 
 .neon-selection::selection {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(59, 130, 246, 0.2);
   text-shadow: 
-    0 0 5px rgba(59, 130, 246, 0.8),
-    0 0 10px rgba(59, 130, 246, 0.6),
-    0 0 15px rgba(59, 130, 246, 0.4),
-    0 0 20px rgba(59, 130, 246, 0.2);
+    0 0 8px rgba(59, 130, 246, 1),
+    0 0 16px rgba(59, 130, 246, 0.8),
+    0 0 24px rgba(59, 130, 246, 0.6),
+    0 0 32px rgba(59, 130, 246, 0.4);
   animation: neonPulse 1.5s ease-in-out infinite;
 }
 
 .neon-selection::-moz-selection {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(59, 130, 246, 0.2);
   text-shadow: 
-    0 0 5px rgba(59, 130, 246, 0.8),
-    0 0 10px rgba(59, 130, 246, 0.6),
-    0 0 15px rgba(59, 130, 246, 0.4),
-    0 0 20px rgba(59, 130, 246, 0.2);
+    0 0 8px rgba(59, 130, 246, 1),
+    0 0 16px rgba(59, 130, 246, 0.8),
+    0 0 24px rgba(59, 130, 246, 0.6),
+    0 0 32px rgba(59, 130, 246, 0.4);
   animation: neonPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes neonPulse {
   0%, 100% {
     text-shadow: 
-      0 0 5px rgba(59, 130, 246, 0.8),
-      0 0 10px rgba(59, 130, 246, 0.6),
-      0 0 15px rgba(59, 130, 246, 0.4),
-      0 0 20px rgba(59, 130, 246, 0.2);
-  }
-  50% {
-    text-shadow: 
       0 0 8px rgba(59, 130, 246, 1),
       0 0 16px rgba(59, 130, 246, 0.8),
       0 0 24px rgba(59, 130, 246, 0.6),
       0 0 32px rgba(59, 130, 246, 0.4);
   }
+  50% {
+    text-shadow: 
+      0 0 12px rgba(59, 130, 246, 1),
+      0 0 24px rgba(59, 130, 246, 0.9),
+      0 0 36px rgba(59, 130, 246, 0.7),
+      0 0 48px rgba(59, 130, 246, 0.5);
+  }
+}
+
+/* Additional targeting for form elements */
+[data-radix-collection-item]::selection,
+.form-control::selection,
+button::selection {
+  background: rgba(59, 130, 246, 0.25) !important;
+  text-shadow: 
+    0 0 10px rgba(59, 130, 246, 1),
+    0 0 20px rgba(59, 130, 246, 0.8),
+    0 0 30px rgba(59, 130, 246, 0.6) !important;
+}
+
+[data-radix-collection-item]::-moz-selection,
+.form-control::-moz-selection,
+button::-moz-selection {
+  background: rgba(59, 130, 246, 0.25) !important;
+  text-shadow: 
+    0 0 10px rgba(59, 130, 246, 1),
+    0 0 20px rgba(59, 130, 246, 0.8),
+    0 0 30px rgba(59, 130, 246, 0.6) !important;
 }
 
 @keyframes neonFlicker {
