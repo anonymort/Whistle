@@ -999,7 +999,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                                 assignedTo: editingCase.assignedTo === "unassigned" ? null : editingCase.assignedTo,
                                                 category: editingCase.category === "uncategorized" ? null : editingCase.category
                                               },
-                                              previousAssignee: submission.assignedTo || undefined
+                                              previousAssignee: submission.assignedTo ?? undefined
                                             });
                                           }
                                         }}
