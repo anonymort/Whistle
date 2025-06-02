@@ -478,9 +478,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { decryptData } = await import("./encryption");
       const decryptedFileData = await decryptData(submission.encryptedFile);
       
+      console.log("Decrypted file data length:", decryptedFileData.length);
+      console.log("Decrypted data preview:", decryptedFileData.substring(0, 200));
+      
       // Parse the file info JSON
       const fileInfo = JSON.parse(decryptedFileData);
+      console.log("File info:", {
+        filename: fileInfo.filename,
+        mimetype: fileInfo.mimetype,
+        size: fileInfo.size,
+        dataLength: fileInfo.data?.length || 0
+      });
+      
       const fileBuffer = Buffer.from(fileInfo.data, 'base64');
+      console.log("Final buffer length:", fileBuffer.length);
       
       // Set appropriate headers for download with original filename and mimetype
       res.setHeader('Content-Disposition', `attachment; filename="${fileInfo.filename || 'attachment'}"`);
