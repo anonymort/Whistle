@@ -23,12 +23,60 @@ const submitRateLimit = rateLimit({
   message: { error: "Too many submissions. Please wait before trying again." },
   standardHeaders: true,
   legacyHeaders: false,
+  onLimitReached: (req) => {
+    auditLogger.log({
+      userId: 'anonymous',
+      action: AUDIT_ACTIONS.RATE_LIMIT_EXCEEDED,
+      resource: 'submission_endpoint',
+      severity: 'high',
+      outcome: 'blocked',
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      details: { endpoint: '/api/submit', limit: 5, window: '1 minute' }
+    });
+  },
 });
 
 const adminLoginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Max 5 login attempts per 15 minutes
   message: { error: "Too many login attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  onLimitReached: (req) => {
+    auditLogger.log({
+      userId: req.body?.username || 'unknown',
+      action: AUDIT_ACTIONS.RATE_LIMIT_EXCEEDED,
+      resource: 'admin_login',
+      severity: 'critical',
+      outcome: 'blocked',
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      details: { endpoint: '/api/admin/login', limit: 5, window: '15 minutes' }
+    });
+  },
+});
+
+const adminActionRateLimit = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // Max 30 admin actions per minute
+  message: { error: "Too many administrative actions. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const investigatorActionRateLimit = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 20, // Max 20 investigator actions per minute
+  message: { error: "Too many actions. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const generalApiRateLimit = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // Max 60 API calls per minute
+  message: { error: "API rate limit exceeded. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -119,8 +167,13 @@ let cleanupInterval: NodeJS.Timeout | null = null;
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup secure session management
   setupSession(app);
-  // Apply rate limiting to submission endpoint
+  
+  // Apply comprehensive rate limiting
   app.use("/api/submit", submitRateLimit);
+  app.use("/api/admin/login", adminLoginRateLimit);
+  app.use("/api/admin/*", adminActionRateLimit);
+  app.use("/api/investigator/*", investigatorActionRateLimit);
+  app.use("/api/*", generalApiRateLimit);
 
   // Setup automated data retention cleanup (runs daily)
   if (cleanupInterval) {
