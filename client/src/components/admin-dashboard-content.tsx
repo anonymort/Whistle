@@ -801,6 +801,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Status</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Priority</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">Hospital Trust</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden lg:table-cell">Event Date</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Submitted</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">File</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Assigned To</th>
@@ -836,6 +837,17 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                           <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
                             {submission.hospitalTrust || 'Unknown'}
                           </td>
+                          
+                          {/* Event Date Column */}
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden lg:table-cell">
+                            <div className="flex flex-col">
+                              <span>{submission.eventDate ? new Date(submission.eventDate).toLocaleDateString() : 'Not specified'}</span>
+                              {submission.eventTime && (
+                                <span className="text-xs text-gray-500">{submission.eventTime}</span>
+                              )}
+                            </div>
+                          </td>
+                          
                           <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
                             <div className="flex flex-col">
                               <span>{formatDate(submission.submittedAt)}</span>
