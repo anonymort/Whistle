@@ -67,6 +67,8 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   const [caseNotes, setCaseNotes] = useState<{[key: number]: CaseNote[]}>({});
   const [newNote, setNewNote] = useState('');
   const [noteType, setNoteType] = useState('general');
+  const [newInvestigator, setNewInvestigator] = useState({ name: '', email: '', department: '' });
+  const [editingInvestigator, setEditingInvestigator] = useState<Investigator | null>(null);
   const itemsPerPage = 10;
   const { toast } = useToast();
 
@@ -139,6 +141,87 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
       toast({
         title: "Error",
         description: "Failed to add note.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Investigator Management Mutations
+  const createInvestigatorMutation = useMutation({
+    mutationFn: async (investigator: { name: string; email: string; department: string }) => {
+      const response = await apiRequest("POST", "/api/admin/investigators", investigator);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/investigators'] });
+      setNewInvestigator({ name: '', email: '', department: '' });
+      toast({
+        title: "Investigator Added",
+        description: "New investigator has been created successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create investigator.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateInvestigatorMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
+      const response = await apiRequest("PATCH", `/api/admin/investigators/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/investigators'] });
+      setEditingInvestigator(null);
+      toast({
+        title: "Investigator Updated",
+        description: "Investigator details updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update investigator.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Enhanced case update with email notification
+  const updateCaseWithNotificationMutation = useMutation({
+    mutationFn: async ({ id, updates, previousAssignee }: { id: number; updates: any; previousAssignee?: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/submission/${id}`, updates);
+      
+      // Send email notification if assignee changed
+      if (updates.assignedTo && updates.assignedTo !== previousAssignee && updates.assignedTo !== "unassigned") {
+        try {
+          await apiRequest("POST", "/api/admin/notify-assignment", {
+            submissionId: id,
+            investigatorName: updates.assignedTo
+          });
+        } catch (error) {
+          console.warn("Failed to send email notification:", error);
+        }
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
+      toast({
+        title: "Case Updated",
+        description: "Case details updated and investigator notified.",
+      });
+      setEditingCase(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update case.",
         variant: "destructive",
       });
     },
@@ -517,6 +600,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
         <Tabs defaultValue="submissions" className="space-y-6">
           <TabsList>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="investigators">Investigators</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
@@ -882,18 +966,19 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                                       <Button 
                                         onClick={() => {
                                           if (editingCase) {
-                                            updateCaseMutation.mutate({
+                                            updateCaseWithNotificationMutation.mutate({
                                               id: submission.id,
                                               updates: {
                                                 status: editingCase.status,
                                                 priority: editingCase.priority,
-                                                assignedTo: editingCase.assignedTo,
-                                                category: editingCase.category
-                                              }
+                                                assignedTo: editingCase.assignedTo === "unassigned" ? null : editingCase.assignedTo,
+                                                category: editingCase.category === "uncategorized" ? null : editingCase.category
+                                              },
+                                              previousAssignee: submission.assignedTo
                                             });
                                           }
                                         }}
-                                        disabled={updateCaseMutation.isPending}
+                                        disabled={updateCaseWithNotificationMutation.isPending}
                                         className="w-full"
                                       >
                                         Update Case Details
@@ -1101,6 +1186,154 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                 )}
               </div>
             )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="investigators">
+            <Card>
+              <CardHeader>
+                <CardTitle>Investigator Management</CardTitle>
+                <CardDescription>
+                  Manage investigators who can be assigned to cases. When assigned, they will receive email notifications.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Add New Investigator */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="text-lg font-semibold mb-4">Add New Investigator</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        value={newInvestigator.name}
+                        onChange={(e) => setNewInvestigator(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Full name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newInvestigator.email}
+                        onChange={(e) => setNewInvestigator(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="email@nhs.uk"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="department">Department</Label>
+                      <Input
+                        id="department"
+                        value={newInvestigator.department}
+                        onChange={(e) => setNewInvestigator(prev => ({ ...prev, department: e.target.value }))}
+                        placeholder="e.g. Patient Safety"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => createInvestigatorMutation.mutate(newInvestigator)}
+                    disabled={createInvestigatorMutation.isPending || !newInvestigator.name || !newInvestigator.email}
+                    className="mt-4"
+                  >
+                    Add Investigator
+                  </Button>
+                </div>
+
+                {/* Existing Investigators */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Current Investigators</h3>
+                  <div className="grid gap-4">
+                    {investigators.map((investigator: Investigator) => (
+                      <div key={investigator.id} className="border rounded-lg p-4">
+                        {editingInvestigator?.id === investigator.id ? (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <Label>Name</Label>
+                                <Input
+                                  value={editingInvestigator.name}
+                                  onChange={(e) => setEditingInvestigator(prev => 
+                                    prev ? { ...prev, name: e.target.value } : null
+                                  )}
+                                />
+                              </div>
+                              <div>
+                                <Label>Email</Label>
+                                <Input
+                                  type="email"
+                                  value={editingInvestigator.email}
+                                  onChange={(e) => setEditingInvestigator(prev => 
+                                    prev ? { ...prev, email: e.target.value } : null
+                                  )}
+                                />
+                              </div>
+                              <div>
+                                <Label>Department</Label>
+                                <Input
+                                  value={editingInvestigator.department || ''}
+                                  onChange={(e) => setEditingInvestigator(prev => 
+                                    prev ? { ...prev, department: e.target.value } : null
+                                  )}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => updateInvestigatorMutation.mutate({
+                                  id: investigator.id,
+                                  updates: {
+                                    name: editingInvestigator.name,
+                                    email: editingInvestigator.email,
+                                    department: editingInvestigator.department
+                                  }
+                                })}
+                                disabled={updateInvestigatorMutation.isPending}
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingInvestigator(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-semibold">{investigator.name}</h4>
+                              <p className="text-sm text-gray-600">{investigator.email}</p>
+                              {investigator.department && (
+                                <p className="text-sm text-gray-500">{investigator.department}</p>
+                              )}
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  investigator.isActive === 'yes' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {investigator.isActive === 'yes' ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingInvestigator(investigator)}
+                            >
+                              Edit
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

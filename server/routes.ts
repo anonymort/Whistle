@@ -658,7 +658,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const investigator = await storage.createInvestigator({
         name,
         email,
-        department
+        department: department || null,
+        isActive: 'yes'
       });
 
       await auditLogger.log({
@@ -674,6 +675,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Add investigator error:", error);
       res.status(500).json({ error: "Failed to add investigator" });
+    }
+  });
+
+  // Update investigator
+  app.patch("/api/admin/investigators/:id", requireAdminAuth, csrfProtection, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid investigator ID" });
+      }
+
+      const investigator = await storage.updateInvestigator(id, updates);
+
+      await auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: "UPDATE_INVESTIGATOR",
+        resource: 'investigator',
+        details: { investigatorId: id, updates },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json(investigator);
+    } catch (error) {
+      console.error("Update investigator error:", error);
+      res.status(500).json({ error: "Failed to update investigator" });
+    }
+  });
+
+  // Send assignment notification email
+  app.post("/api/admin/notify-assignment", requireAdminAuth, csrfProtection, async (req, res) => {
+    try {
+      const { submissionId, investigatorName } = req.body;
+
+      // Find the investigator by name
+      const investigators = await storage.getAllInvestigators();
+      const investigator = investigators.find(inv => inv.name === investigatorName);
+      
+      if (!investigator) {
+        return res.status(404).json({ error: "Investigator not found" });
+      }
+
+      // Get submission details
+      const submission = await storage.getSubmissionById(submissionId);
+      if (!submission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      // Check if SendGrid is configured
+      if (!process.env.SENDGRID_API_KEY) {
+        console.warn("SendGrid API key not configured - email notification skipped");
+        return res.json({ message: "Assignment completed - email notifications not configured" });
+      }
+
+      // Send email notification using SendGrid
+      try {
+        const sgMail = require('@sendgrid/mail');
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+        const msg = {
+          to: investigator.email,
+          from: 'noreply@whistlelite.nhs.uk', // Replace with verified sender
+          subject: `NHS WhistleLite - New Case Assignment #${submissionId}`,
+          html: `
+            <h2>New Case Assignment</h2>
+            <p>Dear ${investigator.name},</p>
+            <p>You have been assigned to investigate a new whistleblowing case:</p>
+            <ul>
+              <li><strong>Case ID:</strong> #${submissionId}</li>
+              <li><strong>Priority:</strong> ${submission.priority || 'Standard'}</li>
+              <li><strong>Hospital Trust:</strong> ${submission.hospitalTrust || 'Not specified'}</li>
+              <li><strong>Submitted:</strong> ${new Date(submission.submittedAt).toLocaleDateString()}</li>
+            </ul>
+            <p>Please log into the NHS WhistleLite admin portal to review the case details and begin your investigation.</p>
+            <p>This is an automated notification. Please do not reply to this email.</p>
+          `
+        };
+
+        await sgMail.send(msg);
+
+        await auditLogger.log({
+          userId: (req.session as any).adminId,
+          action: "SEND_EMAIL_NOTIFICATION",
+          resource: 'notification',
+          details: { submissionId, investigatorEmail: investigator.email, investigatorName },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+
+        res.json({ message: "Assignment notification sent successfully" });
+      } catch (emailError) {
+        console.error("Failed to send email:", emailError);
+        res.status(500).json({ error: "Assignment completed but email notification failed" });
+      }
+    } catch (error) {
+      console.error("Error sending assignment notification:", error);
+      res.status(500).json({ error: "Failed to process assignment notification" });
     }
   });
 
