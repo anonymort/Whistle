@@ -23,7 +23,7 @@ const submitRateLimit = rateLimit({
   message: { error: "Too many submissions. Please wait before trying again." },
   standardHeaders: true,
   legacyHeaders: false,
-  onLimitReached: (req) => {
+  handler: (req, res) => {
     auditLogger.log({
       userId: 'anonymous',
       action: AUDIT_ACTIONS.RATE_LIMIT_EXCEEDED,
@@ -34,16 +34,16 @@ const submitRateLimit = rateLimit({
       userAgent: req.get('User-Agent'),
       details: { endpoint: '/api/submit', limit: 5, window: '1 minute' }
     });
+    res.status(429).json({ error: "Too many submissions. Please wait before trying again." });
   },
 });
 
 const adminLoginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Max 5 login attempts per 15 minutes
-  message: { error: "Too many login attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
-  onLimitReached: (req) => {
+  handler: (req, res) => {
     auditLogger.log({
       userId: req.body?.username || 'unknown',
       action: AUDIT_ACTIONS.RATE_LIMIT_EXCEEDED,
@@ -54,6 +54,7 @@ const adminLoginRateLimit = rateLimit({
       userAgent: req.get('User-Agent'),
       details: { endpoint: '/api/admin/login', limit: 5, window: '15 minutes' }
     });
+    res.status(429).json({ error: "Too many login attempts. Please try again later." });
   },
 });
 
