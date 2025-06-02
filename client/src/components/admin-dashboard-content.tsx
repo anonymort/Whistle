@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, Filter, X } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, Filter, X, Edit3, MessageSquare, User, Calendar, Flag, TrendingUp, CheckCircle, CircleX, AlertCircle, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -20,6 +24,30 @@ interface Submission {
   hospitalTrust: string | null;
   sha256Hash: string;
   submittedAt: Date;
+  status: string;
+  priority: string;
+  assignedTo: string | null;
+  category: string | null;
+  riskLevel: string;
+  lastUpdated: Date;
+}
+
+interface CaseNote {
+  id: number;
+  submissionId: number;
+  note: string;
+  createdBy: string;
+  isInternal: string;
+  noteType: string;
+  createdAt: Date;
+}
+
+interface Investigator {
+  id: number;
+  name: string;
+  email: string;
+  department: string | null;
+  isActive: string;
 }
 
 interface AdminDashboardContentProps {
@@ -30,9 +58,15 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [decryptedContent, setDecryptedContent] = useState<{[key: number]: string}>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<'date' | 'trust'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'trust' | 'status' | 'priority'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedTrusts, setSelectedTrusts] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [editingCase, setEditingCase] = useState<Submission | null>(null);
+  const [caseNotes, setCaseNotes] = useState<{[key: number]: CaseNote[]}>({});
+  const [newNote, setNewNote] = useState('');
+  const [noteType, setNoteType] = useState('general');
   const itemsPerPage = 10;
   const { toast } = useToast();
 
@@ -43,10 +77,120 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
       const data = await response.json();
       return data.map((s: any) => ({
         ...s,
-        submittedAt: new Date(s.submittedAt)
+        submittedAt: new Date(s.submittedAt),
+        lastUpdated: s.lastUpdated ? new Date(s.lastUpdated) : new Date(s.submittedAt)
       }));
     }
   });
+
+  const { data: investigators = [] } = useQuery({
+    queryKey: ['/api/admin/investigators'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/investigators");
+      return response.json();
+    }
+  });
+
+  // Case Management Mutations
+  const updateCaseMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
+      const response = await apiRequest("PATCH", `/api/admin/submission/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/submissions'] });
+      toast({
+        title: "Case Updated",
+        description: "Case details updated successfully.",
+      });
+      setEditingCase(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update case.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async ({ submissionId, note, noteType }: { submissionId: number; note: string; noteType: string }) => {
+      const response = await apiRequest("POST", `/api/admin/submission/${submissionId}/notes`, {
+        note,
+        noteType,
+        isInternal: 'true'
+      });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      const submissionId = variables.submissionId;
+      setCaseNotes(prev => ({
+        ...prev,
+        [submissionId]: [data, ...(prev[submissionId] || [])]
+      }));
+      setNewNote('');
+      toast({
+        title: "Note Added",
+        description: "Case note added successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add note.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Utility functions for case management
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'new': return <CircleX className="h-4 w-4 text-blue-500" />;
+      case 'under_review': return <Eye className="h-4 w-4 text-yellow-500" />;
+      case 'investigating': return <AlertCircle className="h-4 w-4 text-orange-500" />;
+      case 'resolved': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'closed': return <Pause className="h-4 w-4 text-gray-500" />;
+      default: return <CircleX className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'new': return 'default';
+      case 'under_review': return 'secondary';
+      case 'investigating': return 'destructive';
+      case 'resolved': return 'outline';
+      case 'closed': return 'secondary';
+      default: return 'secondary';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'text-red-600 bg-red-50';
+      case 'high': return 'text-orange-600 bg-orange-50';
+      case 'medium': return 'text-yellow-600 bg-yellow-50';
+      case 'low': return 'text-green-600 bg-green-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  const fetchCaseNotes = async (submissionId: number) => {
+    if (!caseNotes[submissionId]) {
+      try {
+        const response = await apiRequest("GET", `/api/admin/submission/${submissionId}/notes`);
+        const notes = await response.json();
+        setCaseNotes(prev => ({
+          ...prev,
+          [submissionId]: notes.map((n: any) => ({ ...n, createdAt: new Date(n.createdAt) }))
+        }));
+      } catch (error) {
+        console.error("Failed to fetch case notes:", error);
+      }
+    }
+  };
 
   const { data: stats } = useQuery({
     queryKey: ['/api/admin/stats'],

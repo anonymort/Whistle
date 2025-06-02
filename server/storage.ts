@@ -102,6 +102,83 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit);
   }
+
+  async updateSubmission(id: number, updates: UpdateSubmission): Promise<Submission> {
+    const updateData = {
+      ...updates,
+      lastUpdated: new Date()
+    };
+    
+    const [submission] = await db
+      .update(submissions)
+      .set(updateData)
+      .where(eq(submissions.id, id))
+      .returning();
+    
+    if (!submission) {
+      throw new Error("Failed to update submission");
+    }
+    return submission;
+  }
+
+  // Case Notes methods
+  async createCaseNote(insertCaseNote: InsertCaseNote): Promise<CaseNote> {
+    const [caseNote] = await db
+      .insert(caseNotes)
+      .values(insertCaseNote)
+      .returning();
+    
+    if (!caseNote) {
+      throw new Error("Failed to create case note");
+    }
+    return caseNote;
+  }
+
+  async getCaseNotes(submissionId: number): Promise<CaseNote[]> {
+    return await db
+      .select()
+      .from(caseNotes)
+      .where(eq(caseNotes.submissionId, submissionId))
+      .orderBy(desc(caseNotes.createdAt));
+  }
+
+  async deleteCaseNote(noteId: number): Promise<void> {
+    await db.delete(caseNotes).where(eq(caseNotes.id, noteId));
+  }
+
+  // Investigator methods
+  async getAllInvestigators(): Promise<Investigator[]> {
+    return await db
+      .select()
+      .from(investigators)
+      .where(eq(investigators.isActive, "true"))
+      .orderBy(investigators.name);
+  }
+
+  async createInvestigator(insertInvestigator: InsertInvestigator): Promise<Investigator> {
+    const [investigator] = await db
+      .insert(investigators)
+      .values(insertInvestigator)
+      .returning();
+    
+    if (!investigator) {
+      throw new Error("Failed to create investigator");
+    }
+    return investigator;
+  }
+
+  async updateInvestigator(id: number, investigatorData: Partial<InsertInvestigator>): Promise<Investigator> {
+    const [investigator] = await db
+      .update(investigators)
+      .set(investigatorData)
+      .where(eq(investigators.id, id))
+      .returning();
+    
+    if (!investigator) {
+      throw new Error("Failed to update investigator");
+    }
+    return investigator;
+  }
 }
 
 export const storage = new DatabaseStorage();

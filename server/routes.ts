@@ -550,6 +550,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Case Management API Routes
+
+  // Update submission case details
+  app.patch("/api/admin/submission/:id", requireAdminAuth, csrfProtection, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid submission ID" });
+      }
+
+      const submission = await storage.updateSubmission(id, updates);
+      
+      await auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: "UPDATE_CASE",
+        resource: 'submission',
+        details: { submissionId: id, updates },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json(submission);
+    } catch (error) {
+      console.error("Update submission error:", error);
+      res.status(500).json({ error: "Failed to update submission" });
+    }
+  });
+
+  // Get case notes for a submission
+  app.get("/api/admin/submission/:id/notes", requireAdminAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid submission ID" });
+      }
+
+      const notes = await storage.getCaseNotes(id);
+      res.json(notes);
+    } catch (error) {
+      console.error("Get case notes error:", error);
+      res.status(500).json({ error: "Failed to fetch case notes" });
+    }
+  });
+
+  // Add case note
+  app.post("/api/admin/submission/:id/notes", requireAdminAuth, csrfProtection, async (req, res) => {
+    try {
+      const submissionId = parseInt(req.params.id);
+      const { note, noteType, isInternal } = req.body;
+      
+      if (isNaN(submissionId)) {
+        return res.status(400).json({ error: "Invalid submission ID" });
+      }
+
+      if (!note) {
+        return res.status(400).json({ error: "Note content is required" });
+      }
+
+      const caseNote = await storage.createCaseNote({
+        submissionId,
+        note,
+        createdBy: (req.session as any).adminId || 'admin',
+        noteType: noteType || 'general',
+        isInternal: isInternal || 'true'
+      });
+
+      await auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: "ADD_CASE_NOTE",
+        resource: 'case_note',
+        details: { submissionId, noteType },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json(caseNote);
+    } catch (error) {
+      console.error("Add case note error:", error);
+      res.status(500).json({ error: "Failed to add case note" });
+    }
+  });
+
+  // Get all investigators
+  app.get("/api/admin/investigators", requireAdminAuth, async (req, res) => {
+    try {
+      const investigators = await storage.getAllInvestigators();
+      res.json(investigators);
+    } catch (error) {
+      console.error("Get investigators error:", error);
+      res.status(500).json({ error: "Failed to fetch investigators" });
+    }
+  });
+
+  // Add new investigator
+  app.post("/api/admin/investigators", requireAdminAuth, csrfProtection, async (req, res) => {
+    try {
+      const { name, email, department } = req.body;
+      
+      if (!name || !email) {
+        return res.status(400).json({ error: "Name and email are required" });
+      }
+
+      const investigator = await storage.createInvestigator({
+        name,
+        email,
+        department
+      });
+
+      await auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: "ADD_INVESTIGATOR",
+        resource: 'investigator',
+        details: { name, email, department },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json(investigator);
+    } catch (error) {
+      console.error("Add investigator error:", error);
+      res.status(500).json({ error: "Failed to add investigator" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
