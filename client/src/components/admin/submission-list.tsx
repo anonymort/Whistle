@@ -105,21 +105,19 @@ export default function SubmissionList({
 
         return (
           <Card key={submission.id} className="w-full">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="flex-1 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-2">
-                      <Badge className={getStatusColor(submission.status)}>
-                        {submission.status}
-                      </Badge>
-                      <Badge className={getPriorityColor(submission.priority)}>
-                        {submission.priority}
-                      </Badge>
-                      <Badge className={getRiskLevelColor(submission.riskLevel)}>
-                        {submission.riskLevel?.replace('_', ' ')}
-                      </Badge>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={getStatusColor(submission.status)}>
+                      {submission.status}
+                    </Badge>
+                    <Badge className={getPriorityColor(submission.priority)}>
+                      {submission.priority}
+                    </Badge>
+                    <Badge className={getRiskLevelColor(submission.riskLevel)}>
+                      {submission.riskLevel?.replace('_', ' ')}
+                    </Badge>
                     {daysRemaining <= 7 && (
                       <Badge variant="destructive" className="animate-pulse">
                         {daysRemaining} days left
@@ -127,7 +125,7 @@ export default function SubmissionList({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Submitted:</span>
                       <p className="font-medium">{formatDate(submission.submittedAt)}</p>
@@ -176,35 +174,35 @@ export default function SubmissionList({
                   )}
                 </div>
 
-                <div className="flex flex-col space-y-2 ml-4">
+                <div className="flex flex-row sm:flex-col space-x-2 sm:space-x-0 sm:space-y-2 sm:ml-4 w-full sm:w-auto">
                   <Button
                     onClick={() => onDecrypt(submission)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center space-x-1"
+                    className="flex items-center justify-center space-x-1 flex-1 sm:flex-none"
                   >
                     <Eye className="w-4 h-4" />
-                    <span>View</span>
+                    <span className="hidden sm:inline">View</span>
                   </Button>
                   
                   <Button
                     onClick={() => onViewNotes(submission)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center space-x-1"
+                    className="flex items-center justify-center space-x-1 flex-1 sm:flex-none"
                   >
                     <MessageSquare className="w-4 h-4" />
-                    <span>Notes</span>
+                    <span className="hidden sm:inline">Notes</span>
                   </Button>
                   
                   <Button
                     onClick={() => onDelete(submission.id)}
                     variant="destructive"
                     size="sm"
-                    className="flex items-center space-x-1"
+                    className="flex items-center justify-center space-x-1 flex-1 sm:flex-none"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span>Delete</span>
+                    <span className="hidden sm:inline">Delete</span>
                   </Button>
                 </div>
               </div>

@@ -74,17 +74,18 @@ export default function SubmissionFilters({
     <div className="flex items-center space-x-2">
       <Popover open={filterOpen} onOpenChange={setFilterOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="flex items-center space-x-2">
+          <Button variant="outline" className="flex items-center space-x-1 sm:space-x-2 text-sm">
             <Filter className="w-4 h-4" />
-            <span>Filters</span>
+            <span className="hidden sm:inline">Filters</span>
+            <span className="sm:hidden">Filter</span>
             {activeFiltersCount > 0 && (
-              <span className="ml-1 bg-primary text-white text-xs rounded-full px-1">
+              <span className="ml-1 bg-primary text-white text-xs rounded-full px-1 min-w-[16px] text-center">
                 {activeFiltersCount}
               </span>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-4" align="start">
+        <PopoverContent className="w-72 sm:w-80 p-3 sm:p-4" align="start">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Filters</h4>
