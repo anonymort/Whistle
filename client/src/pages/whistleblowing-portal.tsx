@@ -30,6 +30,7 @@ export default function WhistleblowingPortal() {
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3">
+              <AccessibilitySettings />
               <Link href="/about">
                 <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
                   About
