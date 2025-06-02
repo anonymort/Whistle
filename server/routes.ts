@@ -131,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit encrypted whistleblowing report (with CSRF protection)
-  app.post("/api/submit", csrfProtection, async (req: Request, res: Response) => {
+  app.post("/api/submit", csrfProtection, asyncHandler(async (req: Request, res: Response) => {
     try {
       // Validate request body
       const validatedData = insertSubmissionSchema.parse(req.body);
@@ -252,10 +252,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(500).json({ error: "Internal server error" });
     }
-  });
+  }));
 
   // Health check endpoint
-  app.get("/api/health", async (req, res) => {
+  app.get("/api/health", asyncHandler(async (req: Request, res: Response) => {
     try {
       const submissionCount = await storage.getSubmissionCount();
       res.json({ 
@@ -266,10 +266,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ status: "unhealthy", error: "Storage error" });
     }
-  });
+  }));
 
   // Data purge endpoint (for admin use)
-  app.post("/api/purge", async (req, res) => {
+  app.post("/api/purge", asyncHandler(async (req: Request, res: Response) => {
     try {
       const purgedCount = await storage.purgeOldSubmissions();
       res.json({ 
@@ -280,10 +280,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Purge error:", error);
       res.status(500).json({ error: "Purge operation failed" });
     }
-  });
+  }));
 
   // Admin authentication with proper session management
-  app.post("/api/admin/login", adminLoginRateLimit, async (req, res) => {
+  app.post("/api/admin/login", adminLoginRateLimit, asyncHandler(async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
       
@@ -348,10 +348,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Admin login error:", error);
       res.status(500).json({ error: "Authentication failed" });
     }
-  });
+  }));
 
   // Admin logout
-  app.post("/api/admin/logout", requireAdminAuth, async (req, res) => {
+  app.post("/api/admin/logout", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
     try {
       req.session.destroy((err) => {
         if (err) {
