@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSubmissionSchema } from "@shared/schema";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 import rateLimit from "express-rate-limit";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -230,8 +231,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Server configuration error" });
       }
       
-      // Verify credentials
-      if (username === adminUsername && password === adminPassword) {
+      // Verify credentials with timing-attack resistant comparison
+      const usernameValid = crypto.timingSafeEqual(
+        Buffer.from(username),
+        Buffer.from(adminUsername)
+      );
+      
+      const passwordValid = crypto.timingSafeEqual(
+        Buffer.from(password),
+        Buffer.from(adminPassword)
+      );
+      
+      if (usernameValid && passwordValid) {
         // Create secure session
         const session = req.session as any;
         session.isAdminAuthenticated = true;
