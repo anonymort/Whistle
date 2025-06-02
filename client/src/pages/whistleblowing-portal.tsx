@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import SubmissionForm from "@/components/submission-form";
 import SecurityBanner from "@/components/security-banner";
 import SuccessModal from "@/components/success-modal";
+import AccessibilitySettings from "@/components/accessibility-settings";
 
 export default function WhistleblowingPortal() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
