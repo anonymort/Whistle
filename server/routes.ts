@@ -12,30 +12,9 @@ import { verifyPassword } from "./auth";
 import { auditLogger, AUDIT_ACTIONS } from "./audit";
 import { generateCSRFToken, csrfProtection } from "./csrf";
 import { errorHandler, asyncHandler, ValidationError, AuthenticationError } from "./error-handler";
-import { virusScanner } from "./virus-scanner";
 
-// File signature validation for security
-function validateFileSignature(signature: Buffer): boolean {
-  const validSignatures = [
-    // Images
-    [0xFF, 0xD8, 0xFF], // JPEG
-    [0x89, 0x50, 0x4E, 0x47], // PNG
-    [0x47, 0x49, 0x46, 0x38], // GIF
-    [0x52, 0x49, 0x46, 0x46], // WEBP/RIFF
-    // Documents
-    [0x25, 0x50, 0x44, 0x46], // PDF
-    [0x50, 0x4B, 0x03, 0x04], // ZIP/DOCX/XLSX
-    [0xD0, 0xCF, 0x11, 0xE0], // DOC/XLS
-    // Audio
-    [0x49, 0x44, 0x33], // MP3
-    [0x52, 0x49, 0x46, 0x46], // WAV
-    [0x4F, 0x67, 0x67, 0x53], // OGG
-  ];
 
-  return validSignatures.some(validSig => 
-    validSig.every((byte, index) => signature[index] === byte)
-  );
-}
+
 
 // Rate limiters
 const submitRateLimit = rateLimit({
@@ -392,23 +371,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
     try {
       const submissionCount = await storage.getSubmissionCount();
-      const virusStats = virusScanner.getStatistics();
       
       auditLogger.log({
         userId: (req.session as any).adminId,
         action: AUDIT_ACTIONS.VIEW_STATS,
         resource: 'statistics',
-        details: { submissionCount, virusStats }
+        details: { submissionCount }
       });
       
       res.json({ 
         submissionCount,
-        virusScanningStats: {
-          totalScans: virusStats.totalScans,
-          totalDetections: virusStats.totalDetections,
-          detectionRate: virusStats.detectionRate,
-          scanningEnabled: true
-        }
+        fileValidationEnabled: true,
+        allowedFileTypes: ['PDF', 'DOC', 'DOCX', 'PPT', 'CSV', 'TXT']
       });
     } catch (error) {
       console.error("Admin stats error:", error);

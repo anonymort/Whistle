@@ -17,7 +17,7 @@ WhistleLite addresses critical gaps in existing NHS safety reporting systems lik
 ### 🔒 Security & Privacy
 - **End-to-End Encryption**: All submissions encrypted client-side using libsodium public-key cryptography
 - **Anonymous Submissions**: No personal data collection required
-- **Secure File Uploads**: Metadata stripping for PDFs, images, and documents
+- **Secure File Uploads**: Metadata stripping for documents (PDF, DOC, DOCX, PPT, CSV, TXT only)
 - **Data Retention**: Automatic 90-day data purging for GDPR compliance
 - **Audit Logging**: Comprehensive security event tracking
 
@@ -31,7 +31,7 @@ WhistleLite addresses critical gaps in existing NHS safety reporting systems lik
 - **CSRF Protection**: Token-based request validation
 - **Rate Limiting**: Brute force attack prevention
 - **Session Security**: Secure admin authentication with bcrypt password hashing
-- **File Validation**: Comprehensive security checks for uploaded content
+- **File Validation**: Secure document type restrictions (PDF, DOC, DOCX, PPT, CSV, TXT)
 - **Memory Protection**: Secure key management and storage
 
 ## Technology Stack
