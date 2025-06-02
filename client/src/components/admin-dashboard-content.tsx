@@ -326,33 +326,51 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
     return Math.max(0, diffDays);
   };
 
-  // Filter submissions by selected trusts
-  const filteredSubmissions = selectedTrusts.length > 0 
-    ? submissions.filter((submission: Submission) => 
-        selectedTrusts.includes(submission.hospitalTrust || 'Unknown')
-      )
-    : submissions;
+  // Advanced filtering with status and priority
+  const filteredSubmissions = submissions.filter((submission: Submission) => {
+    // Trust filter
+    const trustMatch = selectedTrusts.length === 0 || 
+      selectedTrusts.includes(submission.hospitalTrust || 'Unknown');
+    
+    // Status filter
+    const statusMatch = statusFilter === 'all' || submission.status === statusFilter;
+    
+    // Priority filter  
+    const priorityMatch = priorityFilter === 'all' || submission.priority === priorityFilter;
+    
+    return trustMatch && statusMatch && priorityMatch;
+  });
 
-  // Sort filtered submissions
+  // Enhanced sorting with status and priority options
   const sortedSubmissions = [...filteredSubmissions].sort((a: Submission, b: Submission) => {
-    if (sortBy === 'trust') {
-      const aName = a.hospitalTrust || 'Unknown';
-      const bName = b.hospitalTrust || 'Unknown';
-      if (sortOrder === 'asc') {
-        return aName.localeCompare(bName);
-      } else {
-        return bName.localeCompare(aName);
-      }
-    } else {
-      // Sort by date
-      const aDate = new Date(a.submittedAt).getTime();
-      const bDate = new Date(b.submittedAt).getTime();
-      if (sortOrder === 'asc') {
-        return aDate - bDate;
-      } else {
-        return bDate - aDate;
-      }
+    let comparison = 0;
+    
+    switch (sortBy) {
+      case 'trust':
+        const aName = a.hospitalTrust || 'Unknown';
+        const bName = b.hospitalTrust || 'Unknown';
+        comparison = aName.localeCompare(bName);
+        break;
+      case 'status':
+        const statusOrder = ['new', 'under_review', 'investigating', 'resolved', 'closed'];
+        const aStatusIndex = statusOrder.indexOf(a.status);
+        const bStatusIndex = statusOrder.indexOf(b.status);
+        comparison = aStatusIndex - bStatusIndex;
+        break;
+      case 'priority':
+        const priorityOrder = ['critical', 'high', 'medium', 'low'];
+        const aPriorityIndex = priorityOrder.indexOf(a.priority);
+        const bPriorityIndex = priorityOrder.indexOf(b.priority);
+        comparison = aPriorityIndex - bPriorityIndex;
+        break;
+      default: // date
+        const aDate = new Date(a.submittedAt).getTime();
+        const bDate = new Date(b.submittedAt).getTime();
+        comparison = aDate - bDate;
+        break;
     }
+    
+    return sortOrder === 'asc' ? comparison : -comparison;
   });
 
   const totalPages = Math.ceil(sortedSubmissions.length / itemsPerPage);
@@ -364,7 +382,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
     submissions.map((s: Submission) => s.hospitalTrust || 'Unknown')
   )).sort();
 
-  const handleSort = (newSortBy: 'date' | 'trust') => {
+  const handleSort = (newSortBy: 'date' | 'trust' | 'status' | 'priority') => {
     if (sortBy === newSortBy) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -422,15 +440,51 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* Enhanced Stats Cards with Case Management Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Submissions</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.submissionCount || 0}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">New Cases</CardTitle>
+              <CircleX className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {submissions.filter((s: Submission) => s.status === 'new').length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Investigating</CardTitle>
+              <AlertCircle className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {submissions.filter((s: Submission) => s.status === 'investigating').length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Critical Priority</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {submissions.filter((s: Submission) => s.priority === 'critical').length}
+              </div>
             </CardContent>
           </Card>
           
@@ -448,20 +502,8 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">With Reply Email</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {submissions.filter((s: Submission) => s.replyEmail).length}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -487,7 +529,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Sorting and filtering controls */}
+                {/* Enhanced Sorting and filtering controls with Case Management */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                   <div className="flex flex-wrap gap-2 items-center">
                     <Button
@@ -499,6 +541,26 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                       <span className="hidden sm:inline">Sort by Date</span>
                       <span className="sm:hidden">Date</span>
                       {sortBy === 'date' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
+                    </Button>
+                    <Button
+                      variant={sortBy === 'status' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSort('status')}
+                      className="text-xs sm:text-sm"
+                    >
+                      <span className="hidden sm:inline">Sort by Status</span>
+                      <span className="sm:hidden">Status</span>
+                      {sortBy === 'status' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
+                    </Button>
+                    <Button
+                      variant={sortBy === 'priority' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSort('priority')}
+                      className="text-xs sm:text-sm"
+                    >
+                      <span className="hidden sm:inline">Sort by Priority</span>
+                      <span className="sm:hidden">Priority</span>
+                      {sortBy === 'priority' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
                     </Button>
                     <Button
                       variant={sortBy === 'trust' ? 'default' : 'outline'}
@@ -572,10 +634,39 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                         </div>
                       </PopoverContent>
                     </Popover>
+
+                    {/* Status Filter */}
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="under_review">Under Review</SelectItem>
+                        <SelectItem value="investigating">Investigating</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Priority Filter */}
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                      <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectValue placeholder="All Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priority</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="text-sm text-gray-500">
-                    Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, sortedSubmissions.length)} of {sortedSubmissions.length} submissions
-                    {selectedTrusts.length > 0 && (
+                    Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, sortedSubmissions.length)} of {sortedSubmissions.length} cases
+                    {(selectedTrusts.length > 0 || statusFilter !== 'all' || priorityFilter !== 'all') && (
                       <span className="text-blue-600 ml-1">(filtered)</span>
                     )}
                   </div>
