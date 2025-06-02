@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { encryptData } from "@/lib/encryption";
@@ -22,6 +23,7 @@ const submissionSchema = z.object({
     (val) => NHS_HOSPITALS.includes(val as any),
     "Please select a valid NHS hospital from the list"
   ),
+  category: z.string().min(1, "Please select a category for your report"),
   message: z.string().min(10, "Message must be at least 10 characters").max(5000, "Message must be less than 5000 characters"),
   replyEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
   consentSubmission: z.boolean().refine((val) => val === true, {
@@ -47,6 +49,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
     resolver: zodResolver(submissionSchema),
     defaultValues: {
       hospital: "",
+      category: "",
       message: "",
       replyEmail: "",
       consentSubmission: false,
@@ -93,6 +96,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
         encryptedFile,
         replyEmail: data.replyEmail || null,
         hospitalTrust: data.hospital || null,
+        category: data.category,
         sha256Hash: "", // Will be generated on server
       };
 
@@ -134,6 +138,39 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
                   required
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Category Selection */}
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm font-medium text-gray-700">
+                Report Category <span className="text-error">*</span>
+              </FormLabel>
+              <FormControl>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 hover:border-gray-400 hover:shadow-sm focus:scale-[1.01] focus:shadow-md">
+                    <SelectValue placeholder="Select the type of concern you're reporting" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="patient_safety">Patient Safety</SelectItem>
+                    <SelectItem value="clinical_governance">Clinical Governance</SelectItem>
+                    <SelectItem value="financial_irregularity">Financial Irregularity</SelectItem>
+                    <SelectItem value="data_protection">Data Protection</SelectItem>
+                    <SelectItem value="staff_conduct">Staff Conduct</SelectItem>
+                    <SelectItem value="discrimination">Discrimination</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <p className="text-xs text-gray-500 mt-1">
+                Choose the category that best describes your concern
+              </p>
               <FormMessage />
             </FormItem>
           )}

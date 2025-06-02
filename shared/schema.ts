@@ -57,6 +57,7 @@ export const insertSubmissionSchema = createInsertSchema(submissions).pick({
   replyEmail: true,
   hospitalTrust: true,
   sha256Hash: true,
+  category: true,
 });
 
 export const updateSubmissionSchema = createInsertSchema(submissions).pick({
