@@ -240,33 +240,36 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
     <div className="min-h-screen bg-bg-soft">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Shield className="text-white w-5 h-5" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center">
+                <Shield className="text-white w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">WhistleLite Admin</h1>
-                <p className="text-sm text-gray-600">NHS Whistleblowing Portal Management</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">WhistleLite Admin</h1>
+                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">NHS Whistleblowing Portal Management</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <Button
                 onClick={() => purgeMutation.mutate()}
                 disabled={purgeMutation.isPending}
                 variant="outline"
-                className="flex items-center space-x-2"
+                size="sm"
+                className="flex items-center space-x-2 text-xs sm:text-sm"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Purge Old Data</span>
+                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Purge Old Data</span>
+                <span className="sm:hidden">Purge</span>
               </Button>
               <Button
                 onClick={onLogout}
                 variant="outline"
-                className="flex items-center space-x-2"
+                size="sm"
+                className="flex items-center space-x-2 text-xs sm:text-sm"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>Logout</span>
               </Button>
             </div>
@@ -274,9 +277,9 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Submissions</CardTitle>
@@ -341,21 +344,27 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
               </CardHeader>
               <CardContent>
                 {/* Sorting and filtering controls */}
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex gap-2 items-center">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+                  <div className="flex flex-wrap gap-2 items-center">
                     <Button
                       variant={sortBy === 'date' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleSort('date')}
+                      className="text-xs sm:text-sm"
                     >
-                      Sort by Date {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      <span className="hidden sm:inline">Sort by Date</span>
+                      <span className="sm:hidden">Date</span>
+                      {sortBy === 'date' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
                     </Button>
                     <Button
                       variant={sortBy === 'trust' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleSort('trust')}
+                      className="text-xs sm:text-sm"
                     >
-                      Sort by Trust {sortBy === 'trust' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      <span className="hidden sm:inline">Sort by Trust</span>
+                      <span className="sm:hidden">Trust</span>
+                      {sortBy === 'trust' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
                     </Button>
                     
                     {/* Hospital Trust Filter */}
@@ -364,12 +373,13 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 text-xs sm:text-sm"
                         >
-                          <Filter className="w-4 h-4" />
-                          Filter by Trust
+                          <Filter className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="hidden sm:inline">Filter by Trust</span>
+                          <span className="sm:hidden">Filter</span>
                           {selectedTrusts.length > 0 && (
-                            <Badge variant="secondary" className="ml-1">
+                            <Badge variant="secondary" className="ml-1 text-xs">
                               {selectedTrusts.length}
                             </Badge>
                           )}
@@ -439,16 +449,16 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[640px]">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-3 px-4">ID</th>
-                      <th className="text-left py-3 px-4">Hospital Trust</th>
-                      <th className="text-left py-3 px-4">Submitted</th>
-                      <th className="text-left py-3 px-4">Has File</th>
-                      <th className="text-left py-3 px-4">Reply Email</th>
-                      <th className="text-left py-3 px-4">Days Remaining</th>
-                      <th className="text-left py-3 px-4">Actions</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">ID</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">Hospital Trust</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Submitted</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">File</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Email</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Days Left</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
