@@ -217,8 +217,11 @@ export class VirusScanner {
     }
 
     // Check entropy for packed/encrypted content
+    // Note: Skip entropy check for encrypted files (legitimate encrypted content has high entropy)
     const entropy = this.calculateEntropy(buffer);
-    if (entropy > 7.5) { // High entropy might indicate packed malware
+    const isEncryptedFile = fileName.includes('encrypted_file_');
+    
+    if (!isEncryptedFile && entropy > 7.5) { // High entropy might indicate packed malware
       return {
         isClean: false,
         threatName: 'High_Entropy_Suspicious_Content',
