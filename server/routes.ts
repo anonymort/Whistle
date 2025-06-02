@@ -168,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               filename: fileData.filename,
               mimetype: fileData.mimetype,
               size: fileData.size,
-              fileHash: require('crypto').createHash('sha256').update(fileBuffer).digest('hex')
+              fileHash: crypto.createHash('sha256').update(fileBuffer).digest('hex')
             }
           });
           
