@@ -217,11 +217,13 @@ export class VirusScanner {
     }
 
     // Check entropy for packed/encrypted content
-    // Note: Skip entropy check for encrypted files (legitimate encrypted content has high entropy)
+    // Note: Skip entropy check for legitimate file types that naturally have high entropy
     const entropy = this.calculateEntropy(buffer);
     const isEncryptedFile = fileName.includes('encrypted_file_');
+    const isCompressedFile = fileName.toLowerCase().match(/\.(pdf|zip|rar|7z|gz|bz2|jpg|jpeg|png|mp3|mp4|avi)$/);
     
-    if (!isEncryptedFile && entropy > 7.5) { // High entropy might indicate packed malware
+    // Only flag high entropy for suspicious file types (not compressed/legitimate formats)
+    if (!isEncryptedFile && !isCompressedFile && entropy > 7.5) {
       return {
         isClean: false,
         threatName: 'High_Entropy_Suspicious_Content',
