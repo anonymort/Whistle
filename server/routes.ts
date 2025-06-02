@@ -340,9 +340,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin file download endpoint
-  app.get("/api/admin/download/:submissionId", async (req, res) => {
+  app.get("/api/admin/download/:submissionId", requireAdminAuth, async (req, res) => {
     try {
       const submissionId = parseInt(req.params.submissionId);
+      if (isNaN(submissionId)) {
+        return res.status(400).json({ error: "Invalid submission ID" });
+      }
+      
       const submission = await storage.getSubmissionById(submissionId);
       
       if (!submission || !submission.encryptedFile) {
@@ -387,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rotate admin keys (security endpoint)
-  app.post("/api/admin/rotate-keys", async (req, res) => {
+  app.post("/api/admin/rotate-keys", requireAdminAuth, async (req, res) => {
     try {
       const { rotateAdminKeys } = await import("./encryption");
       const newKeys = await rotateAdminKeys();

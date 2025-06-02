@@ -1,6 +1,6 @@
 import { submissions, type Submission, type InsertSubmission } from "@shared/schema";
 import { db } from "./db";
-import { eq, lt } from "drizzle-orm";
+import { eq, lt, sql } from "drizzle-orm";
 
 export interface IStorage {
   createSubmission(submission: InsertSubmission): Promise<Submission>;
@@ -31,8 +31,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSubmissionCount(): Promise<number> {
-    const result = await db.select().from(submissions);
-    return result.length;
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(submissions);
+    return Number(result[0]?.count || 0);
   }
 
   async getAllSubmissions(): Promise<Submission[]> {
