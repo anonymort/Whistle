@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name,
         email,
         department: department || null,
-        isActive: 'yes'
+        isActive: 'true'
       });
 
       await auditLogger.log({
