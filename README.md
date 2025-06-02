@@ -1,16 +1,16 @@
-# WhistleLite
+# Whistle
 
-A secure, GDPR-compliant NHS whistleblowing platform providing advanced technological safeguards for anonymous reporting with a focus on user protection and ease of use.
+A secure, GDPR-compliant DAUK whistleblowing platform providing advanced technological safeguards for anonymous reporting with a focus on user protection and ease of use.
 
 ## Overview
 
-WhistleLite addresses critical gaps in existing NHS safety reporting systems like Datix by providing:
+Whistle addresses critical gaps in existing healthcare safety reporting systems by providing:
 
 - **Anonymous Reporting**: True anonymity through end-to-end encryption
 - **Mobile-First Design**: Accessible reporting from any device
 - **GDPR Compliance**: Built-in data protection and retention policies
 - **Advanced Security**: Military-grade encryption and audit logging
-- **NHS Integration**: Comprehensive hospital database and workflow integration
+- **Healthcare Integration**: Comprehensive hospital database and workflow integration
 
 ## Key Features
 
@@ -21,11 +21,15 @@ WhistleLite addresses critical gaps in existing NHS safety reporting systems lik
 - **Data Retention**: Automatic 90-day data purging for GDPR compliance
 - **Audit Logging**: Comprehensive security event tracking
 
-### 🏥 NHS Integration
-- **Hospital Directory**: Complete NHS hospital database with search functionality
+### 🏥 Healthcare Integration
+- **Hospital Directory**: Complete UK hospital database with search functionality
 - **Admin Dashboard**: Secure management interface for healthcare administrators
+- **Investigator Management**: Role-based access control with investigator assignment
+- **Case Management**: Advanced workflow system with status tracking and priority levels
+- **Email Notifications**: Automated investigator notifications for case assignments
+- **Analytics Dashboard**: Comprehensive reporting with national overview and trust-by-trust analysis
 - **Submission Management**: Encrypted data viewing and response system
-- **Production-Ready**: Suitable for NHS deployment with security standards compliance
+- **Production-Ready**: Suitable for healthcare deployment with security standards compliance
 
 ### 🛡️ Advanced Protection
 - **CSRF Protection**: Token-based request validation
@@ -54,8 +58,8 @@ WhistleLite addresses critical gaps in existing NHS safety reporting systems lik
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-org/whistlelite.git
-cd whistlelite
+git clone https://github.com/your-org/whistle.git
+cd whistle
 ```
 
 2. **Install dependencies**
@@ -154,6 +158,18 @@ node generate-admin-hash.js your_secure_password
 - `GET /api/admin/submissions` - List all submissions
 - `GET /api/admin/stats` - Get submission statistics
 - `POST /api/admin/decrypt` - Decrypt submission content
+- `PUT /api/admin/submissions/:id` - Update submission status and priority
+- `DELETE /api/admin/submissions/:id` - Delete submission
+- `GET /api/admin/investigators` - List all investigators
+- `POST /api/admin/investigators` - Create new investigator
+- `PUT /api/admin/investigators/:id` - Update investigator
+- `POST /api/admin/case-notes` - Add case note to submission
+- `DELETE /api/admin/case-notes/:id` - Delete case note
+
+### Investigator Endpoints (Authentication Required)
+- `POST /api/investigator/login` - Investigator authentication
+- `GET /api/investigator/submissions` - List assigned submissions
+- `POST /api/investigator/case-notes` - Add case note to assigned submission
 
 ## Security Features
 
@@ -175,15 +191,17 @@ node generate-admin-hash.js your_secure_password
 - **Rate Limiting**: Protection against brute force attacks
 - **CSRF Protection**: Token-based request validation
 
-## NHS Compliance
+## Healthcare Compliance
 
-WhistleLite meets NHS Digital security standards for:
+Whistle meets healthcare security standards for:
 
 - **Data Protection**: GDPR-compliant data handling and retention
-- **Access Control**: Secure authentication and authorization
+- **Access Control**: Secure authentication and authorization with role-based permissions
 - **Audit Logging**: Comprehensive security event monitoring
 - **Encryption**: End-to-end data protection
 - **Vulnerability Protection**: OWASP Top 10 security measures
+- **Case Management**: Full audit trail for submission lifecycle
+- **Email Security**: Secure investigator notifications with SendGrid integration
 
 ## Development
 
@@ -209,16 +227,19 @@ WhistleLite meets NHS Digital security standards for:
 
 ### Database Schema
 
-The application uses a minimal, secure database schema:
+The application uses a comprehensive, secure database schema:
 
-- **submissions**: Encrypted whistleblowing reports
-- **admin_sessions**: Secure session storage
+- **submissions**: Encrypted whistleblowing reports with metadata
+- **investigators**: Healthcare professional accounts with role-based access
+- **case_notes**: Investigation notes and communication logs
+- **audit_logs**: Comprehensive security and action audit trail
+- **sessions**: Secure session storage for admin and investigator authentication
 
 All sensitive data is encrypted client-side before storage.
 
 ### File Upload Security
 
-WhistleLite implements comprehensive file security:
+Whistle implements comprehensive file security:
 
 - **Metadata Stripping**: Removes EXIF data from images, document properties from PDFs
 - **File Validation**: Checks file signatures and MIME types
@@ -233,10 +254,13 @@ WhistleLite implements comprehensive file security:
 - [ ] Generate secure bcrypt password hash
 - [ ] Configure strong SESSION_SECRET (64+ characters)
 - [ ] Set encryption keys to prevent data loss
+- [ ] Configure SendGrid API key for email notifications
 - [ ] Configure HTTPS/TLS termination
 - [ ] Enable database firewall rules
 - [ ] Set up monitoring and alerting
 - [ ] Configure backup procedures
+- [ ] Create initial investigator accounts
+- [ ] Test case assignment workflow
 
 ### Docker Deployment (Optional)
 
@@ -284,16 +308,76 @@ npm run test:retention
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Current Features (v1.0)
+
+### Submission Management
+- End-to-end encrypted anonymous submissions
+- Hospital/trust selection from comprehensive UK database
+- File upload with metadata stripping
+- Automatic 90-day data retention
+
+### Admin Dashboard
+- Comprehensive case management interface
+- Real-time submission statistics
+- Bulk data purging capabilities
+- Encryption key management
+
+### Investigator System
+- Role-based access control
+- Case assignment and tracking
+- Email notifications for new assignments
+- Investigation notes and communication
+
+### Analytics & Reporting
+- National overview dashboard
+- Trust-by-trust analysis
+- Category breakdown charts
+- Timeline and trend analysis
+- Performance metrics tracking
+
+### Security Features
+- libsodium end-to-end encryption
+- CSRF protection
+- Rate limiting
+- Comprehensive audit logging
+- Session security
+
+## Environment Variables
+
+```bash
+# Database Configuration
+DATABASE_URL=postgresql://user:password@localhost:5432/whistle_db
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=your_password
+PGDATABASE=whistle_db
+
+# Authentication
+SESSION_SECRET=your_64_character_session_secret
+ADMIN_USERNAME=Admin
+ADMIN_PASSWORD_HASH=your_bcrypt_hash
+
+# Encryption Keys
+ADMIN_ENCRYPTION_PUBLIC_KEY=base64_encoded_public_key
+ADMIN_ENCRYPTION_PRIVATE_KEY=base64_encoded_private_key
+ADMIN_SIGNING_PUBLIC_KEY=base64_encoded_signing_public_key
+ADMIN_SIGNING_PRIVATE_KEY=base64_encoded_signing_private_key
+
+# Email Configuration (Optional)
+SENDGRID_API_KEY=your_sendgrid_api_key
+```
+
 ## Security
 
-For security vulnerabilities, please email security@whistlelite.nhs.uk instead of using the issue tracker.
+For security vulnerabilities, please contact the development team through secure channels.
 
 ## Support
 
 - **Documentation**: See the `/docs` directory for detailed guides
 - **Issues**: Use GitHub Issues for bug reports and feature requests
-- **NHS Support**: Contact your local NHS Digital team for deployment assistance
+- **Healthcare Support**: Contact your local IT team for deployment assistance
 
 ---
 
-**WhistleLite** - Empowering safe, anonymous reporting in healthcare environments.
+**Whistle** - Empowering safe, anonymous reporting in healthcare environments.
