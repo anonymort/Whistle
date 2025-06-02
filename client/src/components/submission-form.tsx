@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { Shield, LoaderPinwheel } from "lucide-react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +15,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { encryptData } from "@/lib/encryption";
 import FileUpload from "@/components/file-upload";
 import HospitalSelector from "@/components/hospital-selector";
-import NeonText from "@/components/neon-text";
 import { NHS_HOSPITALS } from "@/data/nhs-hospitals";
 
 const submissionSchema = z.object({
@@ -122,13 +120,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
 
   return (
     <Form {...form}>
-      <motion.form 
-        onSubmit={form.handleSubmit(onSubmit)} 
-        className="space-y-6 neon-selection"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 neon-selection">
         {/* Hospital Selection */}
         <FormField
           control={form.control}
@@ -284,8 +276,7 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
             )}
           </Button>
         </div>
-        </motion.form>
-      </Form>
-    </NeonText>
+      </form>
+    </Form>
   );
 }
