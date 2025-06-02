@@ -49,6 +49,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(submissions.id, id));
     return submission || undefined;
   }
+
+  async deleteSubmission(id: number): Promise<void> {
+    await db.delete(submissions).where(eq(submissions.id, id));
+  }
 }
 
 export const storage = new DatabaseStorage();

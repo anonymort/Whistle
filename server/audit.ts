@@ -52,6 +52,7 @@ export const AUDIT_ACTIONS = {
   ADMIN_LOGOUT: 'admin_logout',
   VIEW_SUBMISSIONS: 'view_submissions',
   DECRYPT_SUBMISSION: 'decrypt_submission',
+  DELETE_SUBMISSION: 'delete_submission',
   PURGE_DATA: 'purge_data',
   EXPORT_DATA: 'export_data',
   VIEW_STATS: 'view_stats',
