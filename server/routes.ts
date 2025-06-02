@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
+import { verifyPassword } from "./auth";
 
 // File signature validation for security
 function validateFileSignature(signature: Buffer): boolean {
@@ -136,6 +137,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(413).json({ error: "Encrypted file data too large." });
           }
           
+          // Validate file signature for security
+          if (fileBuffer.length > 4) {
+            const signature = fileBuffer.slice(0, 4);
+            if (!validateFileSignature(signature)) {
+              return res.status(400).json({ error: "Invalid or unsupported file type" });
+            }
+          }
+          
         } catch (error) {
           console.error("File validation error:", error);
           return res.status(400).json({ error: "Invalid encrypted file format." });
@@ -231,16 +240,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Server configuration error" });
       }
       
-      // Verify credentials with timing-attack resistant comparison
+      // Verify credentials with secure hashing and timing-attack resistant comparison
       const usernameValid = crypto.timingSafeEqual(
         Buffer.from(username),
         Buffer.from(adminUsername)
       );
       
-      const passwordValid = crypto.timingSafeEqual(
-        Buffer.from(password),
-        Buffer.from(adminPassword)
-      );
+      const passwordValid = verifyPassword(password, adminPassword);
       
       if (usernameValid && passwordValid) {
         // Create secure session
