@@ -684,14 +684,16 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px]">
+                <table className="w-full min-w-[800px]">
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">ID</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Status</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Priority</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">Hospital Trust</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Submitted</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">File</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Email</th>
+                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Assigned To</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Days Left</th>
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">Actions</th>
                     </tr>
@@ -699,9 +701,28 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                   <tbody>
                     {paginatedSubmissions.map((submission: Submission) => {
                       const daysRemaining = calculateDaysRemaining(submission.submittedAt);
+                      const assignedInvestigator = investigators.find(inv => inv.name === submission.assignedTo);
                       return (
                         <tr key={submission.id} className="border-b hover:bg-gray-50">
                           <td className="py-2 sm:py-3 px-2 sm:px-4 font-mono text-xs sm:text-sm">#{submission.id}</td>
+                          
+                          {/* Status Column */}
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            <div className="flex items-center gap-2">
+                              {getStatusIcon(submission.status)}
+                              <Badge variant={getStatusBadgeVariant(submission.status) as any} className="text-xs">
+                                {submission.status.replace('_', ' ').toUpperCase()}
+                              </Badge>
+                            </div>
+                          </td>
+                          
+                          {/* Priority Column */}
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            <Badge className={`text-xs ${getPriorityColor(submission.priority)}`}>
+                              {submission.priority.toUpperCase()}
+                            </Badge>
+                          </td>
+                          
                           <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
                             {submission.hospitalTrust || 'Unknown'}
                           </td>
@@ -720,11 +741,15 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                               <Badge variant="outline" className="text-xs">No</Badge>
                             )}
                           </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden md:table-cell">
-                            {submission.replyEmail ? (
-                              <Badge variant="secondary" className="text-xs">Yes</Badge>
+                          {/* Assigned To Column */}
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">
+                            {assignedInvestigator ? (
+                              <div className="flex items-center gap-1">
+                                <User className="w-3 h-3 text-gray-400" />
+                                <span className="text-xs">{assignedInvestigator.name}</span>
+                              </div>
                             ) : (
-                              <Badge variant="outline" className="text-xs">No</Badge>
+                              <Badge variant="outline" className="text-xs">Unassigned</Badge>
                             )}
                           </td>
                           <td className="py-2 sm:py-3 px-2 sm:px-4">
@@ -739,6 +764,214 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                           </td>
                           <td className="py-2 sm:py-3 px-2 sm:px-4">
                             <div className="flex gap-1">
+                              {/* Case Management Button */}
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingCase(submission);
+                                      fetchCaseNotes(submission.id);
+                                    }}
+                                    className="text-xs"
+                                  >
+                                    <Settings className="w-3 h-3" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                  <DialogHeader>
+                                    <DialogTitle>Case Management - #{submission.id}</DialogTitle>
+                                    <DialogDescription>
+                                      Submitted: {formatDate(submission.submittedAt)} | Trust: {submission.hospitalTrust || 'Unknown'}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Case Details */}
+                                    <div className="space-y-4">
+                                      <h3 className="font-semibold">Case Details</h3>
+                                      
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <Label>Status</Label>
+                                          <Select 
+                                            value={editingCase?.status || submission.status}
+                                            onValueChange={(value) => 
+                                              setEditingCase(prev => prev ? {...prev, status: value} : null)
+                                            }
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="new">New</SelectItem>
+                                              <SelectItem value="under_review">Under Review</SelectItem>
+                                              <SelectItem value="investigating">Investigating</SelectItem>
+                                              <SelectItem value="resolved">Resolved</SelectItem>
+                                              <SelectItem value="closed">Closed</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        
+                                        <div>
+                                          <Label>Priority</Label>
+                                          <Select 
+                                            value={editingCase?.priority || submission.priority}
+                                            onValueChange={(value) => 
+                                              setEditingCase(prev => prev ? {...prev, priority: value} : null)
+                                            }
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="low">Low</SelectItem>
+                                              <SelectItem value="medium">Medium</SelectItem>
+                                              <SelectItem value="high">High</SelectItem>
+                                              <SelectItem value="critical">Critical</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        
+                                        <div className="col-span-2">
+                                          <Label>Assign to Investigator</Label>
+                                          <Select 
+                                            value={editingCase?.assignedTo || submission.assignedTo || ""}
+                                            onValueChange={(value) => 
+                                              setEditingCase(prev => prev ? {...prev, assignedTo: value || null} : null)
+                                            }
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select investigator" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="">Unassigned</SelectItem>
+                                              {investigators.map((inv: any) => (
+                                                <SelectItem key={inv.id} value={inv.name}>{inv.name} - {inv.department}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        
+                                        <div className="col-span-2">
+                                          <Label>Category</Label>
+                                          <Select 
+                                            value={editingCase?.category || submission.category || ""}
+                                            onValueChange={(value) => 
+                                              setEditingCase(prev => prev ? {...prev, category: value || null} : null)
+                                            }
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="">Not categorized</SelectItem>
+                                              <SelectItem value="patient_safety">Patient Safety</SelectItem>
+                                              <SelectItem value="clinical_governance">Clinical Governance</SelectItem>
+                                              <SelectItem value="financial_irregularity">Financial Irregularity</SelectItem>
+                                              <SelectItem value="data_protection">Data Protection</SelectItem>
+                                              <SelectItem value="staff_conduct">Staff Conduct</SelectItem>
+                                              <SelectItem value="discrimination">Discrimination</SelectItem>
+                                              <SelectItem value="other">Other</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+                                      
+                                      <Button 
+                                        onClick={() => {
+                                          if (editingCase) {
+                                            updateCaseMutation.mutate({
+                                              id: submission.id,
+                                              updates: {
+                                                status: editingCase.status,
+                                                priority: editingCase.priority,
+                                                assignedTo: editingCase.assignedTo,
+                                                category: editingCase.category
+                                              }
+                                            });
+                                          }
+                                        }}
+                                        disabled={updateCaseMutation.isPending}
+                                        className="w-full"
+                                      >
+                                        Update Case Details
+                                      </Button>
+                                    </div>
+                                    
+                                    {/* Case Notes */}
+                                    <div className="space-y-4">
+                                      <h3 className="font-semibold">Case Notes</h3>
+                                      
+                                      {/* Add Note Form */}
+                                      <div className="border rounded-lg p-4 space-y-4">
+                                        <div>
+                                          <Label>Note Type</Label>
+                                          <Select value={noteType} onValueChange={setNoteType}>
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="general">General</SelectItem>
+                                              <SelectItem value="investigation">Investigation</SelectItem>
+                                              <SelectItem value="follow_up">Follow Up</SelectItem>
+                                              <SelectItem value="resolution">Resolution</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        
+                                        <div>
+                                          <Label>Note</Label>
+                                          <textarea
+                                            value={newNote}
+                                            onChange={(e) => setNewNote(e.target.value)}
+                                            placeholder="Add a case note..."
+                                            className="w-full p-2 border rounded-md resize-none"
+                                            rows={3}
+                                          />
+                                        </div>
+                                        
+                                        <Button 
+                                          onClick={() => {
+                                            if (newNote.trim()) {
+                                              addNoteMutation.mutate({
+                                                submissionId: submission.id,
+                                                note: newNote.trim(),
+                                                noteType
+                                              });
+                                            }
+                                          }}
+                                          disabled={!newNote.trim() || addNoteMutation.isPending}
+                                          size="sm"
+                                        >
+                                          Add Note
+                                        </Button>
+                                      </div>
+                                      
+                                      {/* Existing Notes */}
+                                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                                        {(caseNotes[submission.id] || []).map((note: any) => (
+                                          <div key={note.id} className="border rounded-lg p-3 bg-gray-50">
+                                            <div className="flex justify-between items-start mb-2">
+                                              <Badge variant="outline" className="text-xs">
+                                                {note.noteType.replace('_', ' ').toUpperCase()}
+                                              </Badge>
+                                              <span className="text-xs text-gray-500">
+                                                {format(note.createdAt, 'MMM dd, yyyy HH:mm')}
+                                              </span>
+                                            </div>
+                                            <p className="text-sm">{note.note}</p>
+                                            <p className="text-xs text-gray-500 mt-1">by {note.createdBy}</p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              
+                              {/* View Details Button */}
                               <Dialog>
                                 <DialogTrigger asChild>
                                   <Button
