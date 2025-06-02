@@ -19,6 +19,10 @@ export class DatabaseStorage implements IStorage {
       .insert(submissions)
       .values(insertSubmission)
       .returning();
+    
+    if (!submission) {
+      throw new Error("Failed to create submission");
+    }
     return submission;
   }
 
@@ -35,7 +39,7 @@ export class DatabaseStorage implements IStorage {
 
   async getSubmissionCount(): Promise<number> {
     const result = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`count(${submissions.id})` })
       .from(submissions);
     return Number(result[0]?.count || 0);
   }
@@ -61,6 +65,10 @@ export class DatabaseStorage implements IStorage {
       .insert(auditLogs)
       .values(insertAuditLog)
       .returning();
+    
+    if (!auditLog) {
+      throw new Error("Failed to create audit log");
+    }
     return auditLog;
   }
 

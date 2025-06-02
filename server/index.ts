@@ -9,7 +9,10 @@ dotenv.config();
 
 // Security: Hash password function
 function hashPassword(password: string): string {
-  return crypto.pbkdf2Sync(password, process.env.SESSION_SECRET || 'fallback-salt', 100000, 64, 'sha512').toString('hex');
+  if (!process.env.SESSION_SECRET) {
+    throw new Error('SESSION_SECRET environment variable is required for secure password hashing');
+  }
+  return crypto.pbkdf2Sync(password, process.env.SESSION_SECRET, 100000, 64, 'sha512').toString('hex');
 }
 
 // Validate required environment variables
