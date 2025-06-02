@@ -392,7 +392,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
                             )}
                           </div>
                           <div className="max-h-48 overflow-y-auto space-y-1">
-                            {uniqueTrusts.map((trust) => (
+                            {uniqueTrusts.map((trust: string) => (
                               <div key={trust} className="flex items-center space-x-2">
                                 <Checkbox
                                   id={trust}
