@@ -40,6 +40,9 @@ export const submissions = pgTable("submissions", {
   verificationStatus: varchar("verification_status", { length: 50 }).notNull().default("pending"),
   legalReviewStatus: varchar("legal_review_status", { length: 50 }).notNull().default("not_required"),
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+  // Anonymous Reply Service Data
+  simpleloginAliasId: varchar("simplelogin_alias_id", { length: 50 }),
+  encryptedAliasEmail: text("encrypted_alias_email"),
   // Data Management
   requiresEscalation: varchar("requires_escalation", { length: 10 }).notNull().default("false"),
   hasOngoingCorrespondence: varchar("has_ongoing_correspondence", { length: 10 }).notNull().default("false"),
@@ -105,6 +108,9 @@ export const insertSubmissionSchema = createInsertSchema(submissions).pick({
   evidenceType: true,
   witnessesPresent: true,
   encryptedWitnessDetails: true,
+  // SimpleLogin fields
+  simpleloginAliasId: true,
+  encryptedAliasEmail: true,
 });
 
 export const updateSubmissionSchema = createInsertSchema(submissions).pick({

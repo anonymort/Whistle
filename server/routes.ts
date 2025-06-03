@@ -10,6 +10,7 @@ import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
 import { verifyPassword, hashPassword } from "./auth";
 import { auditLogger, AUDIT_ACTIONS } from "./audit";
+import { createAnonymousReplyService } from "./simplelogin";
 import { generateCSRFToken, csrfProtection } from "./csrf";
 import { errorHandler, asyncHandler, ValidationError, AuthenticationError } from "./error-handler";
 
@@ -283,10 +284,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .update(JSON.stringify(validatedData))
         .digest('hex');
 
-      const submissionData = {
+      let submissionData = {
         ...validatedData,
         sha256Hash: submissionHash,
       };
+
+      // Handle anonymous reply service setup
+      if (validatedData.contactMethod === 'anonymous_reply') {
+        try {
+          const anonymousService = await createAnonymousReplyService(submissionHash.substring(0, 12));
+          submissionData = {
+            ...submissionData,
+            simpleloginAliasId: anonymousService.aliasId.toString(),
+            encryptedAliasEmail: anonymousService.aliasEmail,
+            encryptedContactDetails: anonymousService.anonymousId,
+            hasOngoingCorrespondence: "true"
+          };
+          
+          console.log(`Created SimpleLogin alias for submission: ${anonymousService.aliasEmail}`);
+        } catch (error) {
+          console.error('Failed to create anonymous reply service:', error);
+          // Fall back to standard anonymous submission
+          submissionData = {
+            ...submissionData,
+            contactMethod: 'anonymous',
+            remainsAnonymous: 'true'
+          };
+        }
+      }
 
       // Store the submission
       const submission = await storage.createSubmission(submissionData);
