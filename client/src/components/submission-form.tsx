@@ -32,7 +32,11 @@ const submissionSchema = z.object({
   ),
   eventTime: z.string().optional(),
   message: z.string().min(10, "Message must be at least 10 characters").max(5000, "Message must be less than 5000 characters"),
+  // Hybrid Model - Optional Identity Fields
+  contactMethod: z.enum(["anonymous", "email", "anonymous_reply"]).default("anonymous"),
   replyEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
+  anonymousReplyId: z.string().optional(),
+  remainsAnonymous: z.boolean().default(true),
   consentSubmission: z.boolean().refine((val) => val === true, {
     message: "You must consent to submit",
   }),
@@ -86,10 +90,15 @@ export default function SubmissionForm({ onSuccess }: SubmissionFormProps) {
     defaultValues: {
       hospital: "",
       category: "",
+      reportType: "",
+      evidenceType: "",
       eventDate: "",
       eventTime: "",
       message: "",
+      contactMethod: "anonymous" as const,
       replyEmail: "",
+      anonymousReplyId: "",
+      remainsAnonymous: true,
       consentSubmission: false,
       consentGdpr: false,
     },

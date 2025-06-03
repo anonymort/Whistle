@@ -6,7 +6,11 @@ export const submissions = pgTable("submissions", {
   id: serial("id").primaryKey(),
   encryptedMessage: text("encrypted_message").notNull(),
   encryptedFile: text("encrypted_file"),
-  replyEmail: text("reply_email"),
+  // Hybrid Model - Optional Identity Fields
+  contactMethod: varchar("contact_method", { length: 50 }).default("anonymous"), // 'anonymous', 'email', 'anonymous_reply'
+  encryptedContactDetails: text("encrypted_contact_details"), // Encrypted email or AnonAddy address
+  remainsAnonymous: varchar("remains_anonymous", { length: 10 }).notNull().default("true"),
+  // Non-identifying metadata (safe to store)
   hospitalTrust: text("hospital_trust"),
   sha256Hash: text("sha256_hash").notNull(),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
@@ -23,6 +27,9 @@ export const submissions = pgTable("submissions", {
   verificationStatus: varchar("verification_status", { length: 50 }).notNull().default("pending"),
   legalReviewStatus: varchar("legal_review_status", { length: 50 }).notNull().default("not_required"),
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+  // Escalation and correspondence tracking
+  requiresEscalation: varchar("requires_escalation", { length: 10 }).notNull().default("false"),
+  hasOngoingCorrespondence: varchar("has_ongoing_correspondence", { length: 10 }).notNull().default("false"),
 });
 
 export const auditLogs = pgTable("audit_logs", {

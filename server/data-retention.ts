@@ -4,10 +4,10 @@ import { auditLogger, AUDIT_ACTIONS } from "./audit";
 /**
  * GDPR Compliance: Automated Data Retention and Deletion
  * Article 5(1)(e) - Data kept no longer than necessary
- * Hard-coded 90-day retention policy for whistleblowing submissions
+ * Hard-coded 6-month retention policy for whistleblowing submissions
  */
 
-const RETENTION_DAYS = 90;
+const RETENTION_DAYS = 180; // 6 months retention policy
 
 export class DataRetentionManager {
   private static instance: DataRetentionManager;
