@@ -269,9 +269,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate email format if provided
-      if (validatedData.replyEmail) {
+      if (validatedData.encryptedContactDetails && validatedData.contactMethod === 'email') {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(validatedData.replyEmail)) {
+        if (!emailRegex.test(validatedData.encryptedContactDetails)) {
           res.status(400).json({ error: "Invalid email format" });
           return;
         }

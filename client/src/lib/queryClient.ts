@@ -51,6 +51,31 @@ export async function apiRequest(
   return res;
 }
 
+// Simple API request function for submissions
+export async function submitData(url: string, data: unknown): Promise<any> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  try {
+    const csrfToken = await getCSRFToken();
+    headers["X-CSRF-Token"] = csrfToken;
+  } catch (error) {
+    console.error("Failed to get CSRF token:", error);
+    throw new Error("Security validation failed");
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+
+  await throwIfResNotOk(res);
+  return res.json();
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;

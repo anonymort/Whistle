@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { submitData } from "@/lib/queryClient";
 import { Shield, FileText, AlertTriangle, User, MapPin, Clock } from "lucide-react";
 
 const submissionSchema = z.object({
@@ -95,13 +95,7 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
         encryptedWitnessDetails: data.witnessDetails || null,
       };
       
-      return apiRequest('/api/submissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submissionData),
-      });
+      return submitData('/api/submissions', submissionData);
     },
     onSuccess: () => {
       toast({
