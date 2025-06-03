@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Shield, Lock, Clock, File, Scale3d, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import SubmissionForm from "@/components/submission-form";
+import DatixSubmissionForm from "@/components/datix-submission-form";
 import SecurityBanner from "@/components/security-banner";
 import SuccessModal from "@/components/success-modal";
 import AccessibilitySettings from "@/components/accessibility-settings";
@@ -59,7 +59,7 @@ export default function WhistleblowingPortal() {
             <p className="text-gray-600">Report concerns safely and anonymously by default. Optionally provide contact details for updates. Data is encrypted on your device before transmission. Decryption keys are held only by DAUK reviewers. All submissions are automatically deleted after 6 months unless ongoing correspondence.</p>
           </div>
 
-          <SubmissionForm onSuccess={handleSubmissionSuccess} />
+          <DatixSubmissionForm onSuccess={handleSubmissionSuccess} />
         </div>
 
         {/* Security Info Cards */}

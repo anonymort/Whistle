@@ -6,28 +6,41 @@ export const submissions = pgTable("submissions", {
   id: serial("id").primaryKey(),
   encryptedMessage: text("encrypted_message").notNull(),
   encryptedFile: text("encrypted_file"),
-  // Hybrid Model - Optional Identity Fields
+  // Contact Method Selection
   contactMethod: varchar("contact_method", { length: 50 }).default("anonymous"), // 'anonymous', 'email', 'anonymous_reply'
   encryptedContactDetails: text("encrypted_contact_details"), // Encrypted email or AnonAddy address
   remainsAnonymous: varchar("remains_anonymous", { length: 10 }).notNull().default("true"),
-  // Non-identifying metadata (safe to store)
+  // Reporter Identity Fields (Encrypted when provided)
+  encryptedReporterName: text("encrypted_reporter_name"), // Full name if provided
+  encryptedJobTitle: text("encrypted_job_title"), // Job title/role
+  encryptedDepartment: text("encrypted_department"), // Department/ward
+  encryptedStaffId: text("encrypted_staff_id"), // Staff ID number if applicable
+  reporterRelationship: varchar("reporter_relationship", { length: 50 }), // 'involved', 'witness', 'second_hand'
+  // Incident Location and Context
   hospitalTrust: text("hospital_trust"),
+  incidentLocation: varchar("incident_location", { length: 255 }), // Specific ward/department/location
+  eventDate: varchar("event_date", { length: 10 }),
+  eventTime: varchar("event_time", { length: 8 }),
+  // Classification and Risk Assessment
+  category: varchar("category", { length: 100 }),
+  subcategory: varchar("subcategory", { length: 100 }),
+  reportType: varchar("report_type", { length: 100 }),
+  riskLevel: varchar("risk_level", { length: 20 }).notNull().default("low"),
+  patientSafetyImpact: varchar("patient_safety_impact", { length: 50 }), // 'none', 'potential', 'actual', 'severe'
+  // Evidence and Witnesses
+  evidenceType: varchar("evidence_type", { length: 100 }),
+  witnessesPresent: varchar("witnesses_present", { length: 10 }).default("false"),
+  encryptedWitnessDetails: text("encrypted_witness_details"), // Names/details if provided
+  // System Fields
   sha256Hash: text("sha256_hash").notNull(),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
-  // Case Management Fields
   status: varchar("status", { length: 50 }).notNull().default("new"),
   priority: varchar("priority", { length: 20 }).notNull().default("medium"),
   assignedTo: varchar("assigned_to", { length: 255 }),
-  category: varchar("category", { length: 100 }),
-  reportType: varchar("report_type", { length: 100 }),
-  evidenceType: varchar("evidence_type", { length: 100 }),
-  eventDate: varchar("event_date", { length: 10 }),
-  eventTime: varchar("event_time", { length: 8 }),
-  riskLevel: varchar("risk_level", { length: 20 }).notNull().default("low"),
   verificationStatus: varchar("verification_status", { length: 50 }).notNull().default("pending"),
   legalReviewStatus: varchar("legal_review_status", { length: 50 }).notNull().default("not_required"),
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
-  // Escalation and correspondence tracking
+  // Data Management
   requiresEscalation: varchar("requires_escalation", { length: 10 }).notNull().default("false"),
   hasOngoingCorrespondence: varchar("has_ongoing_correspondence", { length: 10 }).notNull().default("false"),
 });
@@ -67,14 +80,31 @@ export const investigators = pgTable("investigators", {
 export const insertSubmissionSchema = createInsertSchema(submissions).pick({
   encryptedMessage: true,
   encryptedFile: true,
-  replyEmail: true,
+  // Contact method fields
+  contactMethod: true,
+  encryptedContactDetails: true,
+  remainsAnonymous: true,
+  // Reporter identity fields
+  encryptedReporterName: true,
+  encryptedJobTitle: true,
+  encryptedDepartment: true,
+  encryptedStaffId: true,
+  reporterRelationship: true,
+  // Incident details
   hospitalTrust: true,
-  sha256Hash: true,
-  category: true,
-  reportType: true,
-  evidenceType: true,
+  incidentLocation: true,
   eventDate: true,
   eventTime: true,
+  // Classification
+  category: true,
+  subcategory: true,
+  reportType: true,
+  riskLevel: true,
+  patientSafetyImpact: true,
+  // Evidence
+  evidenceType: true,
+  witnessesPresent: true,
+  encryptedWitnessDetails: true,
 });
 
 export const updateSubmissionSchema = createInsertSchema(submissions).pick({

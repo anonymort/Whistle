@@ -199,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit encrypted whistleblowing report (with CSRF protection)
-  app.post("/api/submit", csrfProtection, async (req, res) => {
+  app.post("/api/submissions", csrfProtection, async (req, res) => {
     try {
       // Validate request body
       const validatedData = insertSubmissionSchema.parse(req.body);
