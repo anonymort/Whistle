@@ -56,7 +56,7 @@ export default function WhistleblowingPortal() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="mb-4 sm:mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Submit Anonymous Report</h2>
-            <p className="text-gray-600">Report concerns safely and anonymously. All data is encrypted and automatically deleted after 90 days.</p>
+            <p className="text-gray-600">Report concerns safely and anonymously. Data is encrypted on your device before transmission. Decryption keys are held only by DAUK reviewers. All submissions are automatically deleted after 90 days.</p>
           </div>
 
           <SubmissionForm onSuccess={handleSubmissionSuccess} />
