@@ -77,8 +77,9 @@ export class DataRetentionManager {
       
       // Log the retention action
       await auditLogger.log({
-        action: AUDIT_ACTIONS.DATA_RETENTION,
         userId: 'system',
+        action: AUDIT_ACTIONS.DATA_RETENTION_CLEANUP,
+        resource: 'submissions',
         details: {
           retentionDays: RETENTION_DAYS,
           cutoffDate: cutoffDate.toISOString(),
@@ -96,8 +97,9 @@ export class DataRetentionManager {
       
       // Log the error
       await auditLogger.log({
-        action: 'data_retention_error',
         userId: 'system',
+        action: 'data_retention_error',
+        resource: 'system',
         details: {
           error: error instanceof Error ? error.message : 'Unknown error',
           timestamp: new Date().toISOString()

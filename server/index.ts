@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import { dataRetentionManager } from "./data-retention";
 
 // Load environment variables
 dotenv.config();
