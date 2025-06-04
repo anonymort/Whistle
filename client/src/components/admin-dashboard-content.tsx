@@ -1,26 +1,26 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, TrendingUp, CheckCircle, CircleX, AlertCircle, Pause, Settings, BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
-
+import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, ChevronLeft, ChevronRight } from "lucide-react";
 import SubmissionFilters from "@/components/admin/submission-filters";
 import SubmissionList from "@/components/admin/submission-list";
 import InvestigatorManagement from "@/components/admin/investigator-management";
 import CaseNotesPanel from "@/components/admin/case-notes-panel";
 import SubmissionDetails from "@/components/admin/submission-details";
+import AggregatedReporting from "@/components/admin/aggregated-reporting";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { submitData, apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 
 interface Submission {
   id: number;
   encryptedMessage: string;
   encryptedFile: string | null;
-  replyEmail: string | null;
+  contactMethod: string | null;
+  encryptedContactDetails: string | null;
   hospitalTrust: string | null;
   sha256Hash: string;
   submittedAt: Date;
@@ -52,11 +52,11 @@ interface Investigator {
   isActive: string;
 }
 
-interface AdminDashboardContentProps {
+interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-export default function AdminDashboardContent({ onLogout }: AdminDashboardContentProps) {
+export default function AdminDashboardContent({ onLogout }: AdminDashboardProps) {
   const { toast } = useToast();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [decryptedData, setDecryptedData] = useState<{ message: string; fileName?: string; fileData?: string } | null>(null);
@@ -72,33 +72,30 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   const [trustFilter, setTrustFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("newest");
+  const [reportingTimeRange, setReportingTimeRange] = useState("30days");
 
-  // Data fetching queries
-  const { data: submissions = [], isLoading: submissionsLoading, refetch: refetchSubmissions } = useQuery({
+  // Data fetching
+  const { data: submissions = [], isLoading: submissionsLoading, refetch: refetchSubmissions } = useQuery<Submission[]>({
     queryKey: ['/api/admin/submissions'],
   });
 
-  const { data: investigators = [], isLoading: investigatorsLoading, refetch: refetchInvestigators } = useQuery({
+  const { data: investigators = [], isLoading: investigatorsLoading, refetch: refetchInvestigators } = useQuery<Investigator[]>({
     queryKey: ['/api/admin/investigators'],
   });
 
-  const { data: caseNotes = [], refetch: refetchCaseNotes } = useQuery({
+  const { data: caseNotes = [], refetch: refetchCaseNotes } = useQuery<CaseNote[]>({
     queryKey: ['/api/admin/case-notes', selectedSubmission?.id],
     enabled: !!selectedSubmission?.id,
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats = { total: 0, new: 0, investigating: 0, critical: 0, withFiles: 0, urgent: 0 } } = useQuery({
     queryKey: ['/api/admin/stats'],
   });
 
   // Mutations
   const decryptMutation = useMutation({
     mutationFn: async (encryptedData: string) => {
-      const response = await apiRequest(`/api/admin/decrypt`, {
-        method: 'POST',
-        body: { encryptedData },
-      });
-      return response;
+      return await submitData('/api/admin/decrypt', { encryptedData });
     },
     onSuccess: (data) => {
       setDecryptedData(data);
@@ -115,9 +112,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/admin/submissions/${id}`, {
-        method: 'DELETE',
-      });
+      return await apiRequest('DELETE', `/api/admin/submissions/${id}`);
     },
     onSuccess: () => {
       toast({
@@ -139,10 +134,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
 
   const updateSubmissionMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
-      await apiRequest(`/api/admin/submissions/${id}`, {
-        method: 'PATCH',
-        body: updates,
-      });
+      return await apiRequest('PATCH', `/api/admin/submissions/${id}`, updates);
     },
     onSuccess: () => {
       toast({
@@ -162,10 +154,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
 
   const createInvestigatorMutation = useMutation({
     mutationFn: async (data: { name: string; email: string; department: string; password: string }) => {
-      await apiRequest('/api/admin/investigators', {
-        method: 'POST',
-        body: data,
-      });
+      return await submitData('/api/admin/investigators', data);
     },
     onSuccess: () => {
       toast({
@@ -185,10 +174,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
 
   const updateInvestigatorMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      await apiRequest(`/api/admin/investigators/${id}`, {
-        method: 'PATCH',
-        body: data,
-      });
+      return await apiRequest('PATCH', `/api/admin/investigators/${id}`, data);
     },
     onSuccess: () => {
       toast({
@@ -208,17 +194,14 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
 
   const createCaseNoteMutation = useMutation({
     mutationFn: async (data: { submissionId: number; note: string; noteType: string; isInternal: string }) => {
-      await apiRequest('/api/admin/case-notes', {
-        method: 'POST',
-        body: data,
-      });
+      return await submitData('/api/admin/case-notes', data);
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Note added successfully",
+        description: "Case note added successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/case-notes', selectedSubmission?.id] });
+      refetchCaseNotes();
     },
     onError: (error) => {
       toast({
@@ -231,20 +214,18 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
 
   const deleteCaseNoteMutation = useMutation({
     mutationFn: async (noteId: number) => {
-      await apiRequest(`/api/admin/case-notes/${noteId}`, {
-        method: 'DELETE',
-      });
+      return await apiRequest('DELETE', `/api/admin/case-notes/${noteId}`);
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Note deleted successfully",
+        description: "Case note deleted successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/case-notes', selectedSubmission?.id] });
+      refetchCaseNotes();
     },
     onError: (error) => {
       toast({
-        title: "Failed to delete note",
+        title: "Delete failed",
         description: error.message,
         variant: "destructive",
       });
@@ -253,9 +234,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
 
   const keyRotationMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('/api/admin/rotate-keys', {
-        method: 'POST',
-      });
+      return await submitData('/api/admin/rotate-keys', {});
     },
     onSuccess: () => {
       toast({
@@ -276,10 +255,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
   // Event handlers
   const handleDecrypt = (submission: Submission) => {
     setSelectedSubmission(submission);
-    const submission_ = submissions.find((s: Submission) => s.encryptedMessage === submission.encryptedMessage);
-    if (submission_) {
-      decryptMutation.mutate(submission.encryptedMessage);
-    }
+    decryptMutation.mutate(submission.encryptedMessage);
   };
 
   const handleDelete = (id: number) => {
@@ -311,32 +287,6 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
       id: submissionId,
       updates: { priority }
     });
-  };
-
-  const handleDownloadFile = (fileData: string, fileName: string) => {
-    try {
-      const byteCharacters = atob(fileData);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray]);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      toast({
-        title: "Download failed",
-        description: "Failed to download file",
-        variant: "destructive",
-      });
-    }
   };
 
   const clearFilters = () => {
@@ -432,79 +382,89 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
       </div>
 
       {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
-                </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center space-x-2">
+              <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+              <div>
+                <p className="text-xl sm:text-2xl font-bold">{stats.total || 0}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'new').length}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">New</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center space-x-2">
+              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600" />
+              <div>
+                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'new').length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">New</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center space-x-2">
-                <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'investigating').length}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Investigating</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center space-x-2">
+              <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
+              <div>
+                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'investigating').length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Investigating</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.priority === 'critical').length}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Critical</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
+              <div>
+                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.priority === 'critical').length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Critical</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center space-x-2">
-                <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => {
-                    const now = new Date();
-                    const daysDiff = Math.ceil((now.getTime() - new Date(s.submittedAt).getTime()) / (1000 * 60 * 60 * 24));
-                    return Math.max(0, 20 - daysDiff) <= 7;
-                  }).length}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Urgent</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center space-x-2">
+              <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
+              <div>
+                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.encryptedFile).length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">With Files</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center space-x-2">
+              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
+              <div>
+                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => {
+                  const daysSinceSubmission = Math.floor((Date.now() - new Date(s.submittedAt).getTime()) / (1000 * 60 * 60 * 24));
+                  return daysSinceSubmission <= 7;
+                }).length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">This Week</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="submissions" className="space-y-4">
         <TabsList>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
           <TabsTrigger value="investigators">Investigators</TabsTrigger>
+          <TabsTrigger value="reporting">Regulatory Reporting</TabsTrigger>
         </TabsList>
 
         <TabsContent value="submissions" className="space-y-4">
@@ -590,40 +550,44 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
           />
         </TabsContent>
 
-        <TabsContent value="analytics">
-          <AnalyticsDashboard submissions={submissions} investigators={investigators} />
+        <TabsContent value="reporting">
+          <AggregatedReporting
+            timeRange={reportingTimeRange}
+            onTimeRangeChange={setReportingTimeRange}
+          />
         </TabsContent>
       </Tabs>
 
       {/* Dialogs */}
       <SubmissionDetails
-        isOpen={detailsDialogOpen}
-        onClose={() => {
-          setDetailsDialogOpen(false);
-          setDecryptedData(null);
-        }}
         submission={selectedSubmission}
         decryptedData={decryptedData}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
         investigators={investigators}
         onAssign={handleAssign}
         onStatusChange={handleStatusChange}
         onPriorityChange={handlePriorityChange}
-        onDownloadFile={handleDownloadFile}
-        isUpdating={updateSubmissionMutation.isPending}
       />
 
       <CaseNotesPanel
-        isOpen={notesDialogOpen}
-        onClose={() => setNotesDialogOpen(false)}
         submission={selectedSubmission}
         caseNotes={caseNotes}
-        onAddNote={(data) => createCaseNoteMutation.mutate(data)}
+        open={notesDialogOpen}
+        onOpenChange={setNotesDialogOpen}
+        onAddNote={(note, noteType, isInternal) => 
+          createCaseNoteMutation.mutate({
+            submissionId: selectedSubmission!.id,
+            note,
+            noteType,
+            isInternal
+          })
+        }
         onDeleteNote={(noteId) => deleteCaseNoteMutation.mutate(noteId)}
-        isAdding={createCaseNoteMutation.isPending}
-        isDeleting={deleteCaseNoteMutation.isPending}
+        isAddingNote={createCaseNoteMutation.isPending}
+        isDeletingNote={deleteCaseNoteMutation.isPending}
       />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>
@@ -636,8 +600,8 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
             <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
+            <Button 
+              variant="destructive" 
               onClick={() => submissionToDelete && deleteMutation.mutate(submissionToDelete)}
               disabled={deleteMutation.isPending}
             >
