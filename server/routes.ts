@@ -1119,6 +1119,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // GDPR Subject Access Request endpoints
+  app.post("/api/admin/gdpr/search", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { term, type } = req.body;
+      
+      if (!term || !type) {
+        return res.status(400).json({ error: "Search term and type are required" });
+      }
+
+      await auditLogger.log({
+        action: 'GDPR_DATA_SEARCH',
+        details: `Searched for ${type}: ${term.substring(0, 10)}...`,
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown'
+      });
+
+      const allSubmissions = await storage.getAllSubmissions();
+      const matchedSubmissions = [];
+
+      for (const submission of allSubmissions) {
+        let isMatch = false;
+
+        try {
+          // Decrypt and search based on type
+          const decryptedData = await decryptData(submission.encryptedMessage);
+          const submissionData = JSON.parse(decryptedData);
+
+          switch (type) {
+            case 'name':
+              if (submissionData.reporterName && 
+                  submissionData.reporterName.toLowerCase().includes(term.toLowerCase())) {
+                isMatch = true;
+              }
+              break;
+            case 'email':
+              if (submissionData.reporterEmail && 
+                  submissionData.reporterEmail.toLowerCase().includes(term.toLowerCase())) {
+                isMatch = true;
+              }
+              break;
+            case 'hash':
+              if (submission.sha256Hash.includes(term)) {
+                isMatch = true;
+              }
+              break;
+            case 'trust':
+              if (submission.hospitalTrust && 
+                  submission.hospitalTrust.toLowerCase().includes(term.toLowerCase())) {
+                isMatch = true;
+              }
+              break;
+          }
+
+          if (isMatch) {
+            matchedSubmissions.push(submission);
+          }
+        } catch (decryptionError) {
+          // Skip submissions that can't be decrypted
+          console.error("Decryption error for submission", submission.id, decryptionError);
+        }
+      }
+
+      return res.json({ submissions: matchedSubmissions });
+    } catch (error) {
+      console.error("GDPR search error:", error);
+      return res.status(500).json({ error: "Search failed" });
+    }
+  }));
+
+  app.post("/api/admin/gdpr/export", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { submissionIds } = req.body;
+      
+      if (!Array.isArray(submissionIds) || submissionIds.length === 0) {
+        return res.status(400).json({ error: "Submission IDs are required" });
+      }
+
+      await auditLogger.log({
+        action: 'GDPR_DATA_EXPORT',
+        details: `Exported ${submissionIds.length} submissions for SAR`,
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown'
+      });
+
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        dataController: "DAUK Whistleblowing Portal",
+        legalBasis: "GDPR Article 6(1)(c) - Legal obligation",
+        purpose: "Subject Access Request - Article 15",
+        retentionPeriod: "6 months from submission date",
+        personalData: []
+      };
+
+      for (const submissionId of submissionIds) {
+        const submission = await storage.getSubmissionById(submissionId);
+        if (!submission) continue;
+
+        try {
+          const decryptedData = await decryptData(submission.encryptedMessage);
+          const submissionData = JSON.parse(decryptedData);
+
+          const personalDataEntry = {
+            submissionId: submission.id,
+            submissionDate: submission.submittedAt,
+            dataCategories: {
+              personalIdentifiers: {
+                name: submissionData.reporterName || null,
+                email: submissionData.reporterEmail || null,
+                jobTitle: submissionData.jobTitle || null,
+                department: submissionData.department || null,
+                staffId: submissionData.staffId || null
+              },
+              incidentData: {
+                description: submissionData.incidentDescription || null,
+                location: submissionData.incidentLocation || null,
+                date: submissionData.eventDate || null,
+                time: submissionData.eventTime || null,
+                category: submission.category,
+                priority: submission.priority,
+                riskLevel: submission.riskLevel
+              },
+              processingDetails: {
+                status: submission.status,
+                assignedTo: submission.assignedTo || null,
+                lastUpdated: submission.lastUpdated,
+                sha256Hash: submission.sha256Hash
+              }
+            },
+            dataSource: "Anonymous Whistleblowing Submission",
+            processingPurpose: "Patient safety incident investigation",
+            legalBasisDetail: "Processing necessary for compliance with legal obligation under Health and Safety at Work Act 1974"
+          };
+
+          exportData.personalData.push(personalDataEntry);
+        } catch (decryptionError) {
+          console.error("Export decryption error for submission", submissionId, decryptionError);
+        }
+      }
+
+      return res.json(exportData);
+    } catch (error) {
+      console.error("GDPR export error:", error);
+      return res.status(500).json({ error: "Export failed" });
+    }
+  }));
+
   const httpServer = createServer(app);
   return httpServer;
 }
