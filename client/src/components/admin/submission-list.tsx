@@ -8,7 +8,8 @@ interface Submission {
   id: number;
   encryptedMessage: string;
   encryptedFile: string | null;
-  replyEmail: string | null;
+  contactMethod: string | null;
+  encryptedContactDetails: string | null;
   hospitalTrust: string | null;
   sha256Hash: string;
   submittedAt: Date;
