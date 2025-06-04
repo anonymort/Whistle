@@ -97,10 +97,15 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
       
       return submitData('/api/submissions', submissionData);
     },
-    onSuccess: () => {
+    onSuccess: (response: any) => {
+      const successMessage = response?.anonymousReplyEmail 
+        ? `Your incident report has been submitted securely. For anonymous updates, use: ${response.anonymousReplyEmail}`
+        : "Your incident report has been submitted securely and anonymously.";
+      
       toast({
         title: "Submission Successful",
-        description: "Your incident report has been submitted securely and anonymously.",
+        description: successMessage,
+        duration: 8000,
       });
       form.reset();
       onSuccess();

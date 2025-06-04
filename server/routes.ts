@@ -1,4 +1,5 @@
-import type { Express, RequestHandler } from "express";
+import type { Express, RequestHandler, Request, Response } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSubmissionSchema } from "@shared/schema";
@@ -299,8 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           submissionData = {
             ...submissionData,
             encryptedAliasEmail: aliasInfo.alias,
-            encryptedContactDetails: aliasInfo.alias,
-            hasOngoingCorrespondence: "true"
+            encryptedContactDetails: aliasInfo.alias
           };
           
           console.log(`Created Postmark alias for submission: ${aliasInfo.alias}`);
@@ -1064,6 +1064,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to set password" });
     }
   });
+
+  // Postmark webhook for inbound email processing
+  app.post("/api/postmark/inbound", express.raw({ type: 'application/json' }), asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const bodyString = req.body ? req.body.toString() : '{}';
+      const inboundData = JSON.parse(bodyString);
+      
+      await auditLogger.log({
+        action: 'POSTMARK_INBOUND_EMAIL',
+        details: `Received inbound email to: ${inboundData.To}`,
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'Postmark'
+      });
+
+      const success = await handleInboundEmail(inboundData);
+      
+      if (success) {
+        return res.status(200).json({ message: "Email processed successfully" });
+      } else {
+        return res.status(400).json({ error: "Failed to process email" });
+      }
+    } catch (error) {
+      console.error("Postmark webhook error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }));
 
   const httpServer = createServer(app);
   return httpServer;
