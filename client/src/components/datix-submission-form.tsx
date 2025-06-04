@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { submitData } from "@/lib/queryClient";
-import { Shield, FileText, AlertTriangle, User, MapPin, Clock } from "lucide-react";
+import { encryptData, encryptFile, initializeEncryption, isEncryptionReady } from "@/lib/encryption";
+import { Shield, FileText, AlertTriangle, User, MapPin, Clock, Lock } from "lucide-react";
 
 // Dynamic schema that validates based on contact method
 const createSubmissionSchema = (contactMethod: string) => z.object({
@@ -67,8 +68,29 @@ interface DatixSubmissionFormProps {
 
 export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [encryptionReady, setEncryptionReady] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Initialize encryption on component mount
+  useEffect(() => {
+    const initEncryption = async () => {
+      try {
+        await initializeEncryption();
+        setEncryptionReady(true);
+      } catch (error) {
+        console.error('Failed to initialize encryption:', error);
+        toast({
+          title: "Encryption Error",
+          description: "Unable to initialize secure encryption. Please refresh and try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    initEncryption();
+  }, [toast]);
 
   const form = useForm<SubmissionFormData>({
     resolver: zodResolver(createSubmissionSchema("email")),
@@ -82,32 +104,54 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
 
   const submitMutation = useMutation({
     mutationFn: async (data: SubmissionFormData) => {
-      // Prepare submission data for encryption
+      if (!encryptionReady) {
+        throw new Error('Encryption not ready. Please wait and try again.');
+      }
+
+      // Encrypt all sensitive data fields before submission
       const submissionData = {
-        encryptedMessage: data.incidentDescription,
+        // Encrypt the incident description
+        encryptedMessage: await encryptData(data.incidentDescription),
+        
+        // Contact method and anonymity settings (not encrypted)
         contactMethod: data.contactMethod,
-        encryptedContactDetails: data.replyEmail || null,
         remainsAnonymous: data.contactMethod === "anonymous" ? "true" : "false",
-        encryptedReporterName: data.reporterName || null,
-        encryptedJobTitle: data.jobTitle || null,
-        encryptedDepartment: data.department || null,
-        encryptedStaffId: data.staffId || null,
+        
+        // Encrypt contact details if provided
+        encryptedContactDetails: data.replyEmail ? await encryptData(data.replyEmail) : null,
+        
+        // Encrypt reporter identity information if provided
+        encryptedReporterName: data.reporterName ? await encryptData(data.reporterName) : null,
+        encryptedJobTitle: data.jobTitle ? await encryptData(data.jobTitle) : null,
+        encryptedDepartment: data.department ? await encryptData(data.department) : null,
+        encryptedStaffId: data.staffId ? await encryptData(data.staffId) : null,
+        
+        // Reporter relationship (not sensitive, not encrypted)
         reporterRelationship: data.reporterRelationship || null,
+        
+        // Hospital and incident details (not encrypted as they're needed for routing)
         hospitalTrust: data.hospitalTrust,
         incidentLocation: data.incidentLocation,
         eventDate: data.eventDate,
         eventTime: data.eventTime || null,
+        
+        // Classification data (not encrypted)
         category: data.category,
         subcategory: data.subcategory || null,
         reportType: data.reportType,
         riskLevel: data.riskLevel,
         patientSafetyImpact: data.patientSafetyImpact,
         evidenceType: data.evidenceType || null,
+        
+        // Witness information
         witnessesPresent: data.witnessesPresent ? "true" : "false",
-        encryptedWitnessDetails: data.witnessDetails || null,
+        encryptedWitnessDetails: data.witnessDetails ? await encryptData(data.witnessDetails) : null,
+        
+        // Encrypted file if provided
+        encryptedFile: selectedFile ? await encryptFile(selectedFile) : null,
       };
       
-      return submitData('/api/submissions', submissionData);
+      return submitData('/api/submit', submissionData);
     },
     onSuccess: (response: any) => {
       const successMessage = response?.anonymousReplyEmail 
@@ -607,6 +651,47 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
                   </FormItem>
                 )}
               />
+
+              {/* Secure File Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Upload Evidence File (Optional)</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Validate file size (10MB limit)
+                        if (file.size > 10 * 1024 * 1024) {
+                          toast({
+                            title: "File Too Large",
+                            description: "Please select a file smaller than 10MB",
+                            variant: "destructive",
+                          });
+                          e.target.value = '';
+                          return;
+                        }
+                        setSelectedFile(file);
+                      } else {
+                        setSelectedFile(null);
+                      }
+                    }}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG (Max 10MB)
+                    <br />
+                    <Lock className="inline w-3 h-3 mr-1" />
+                    Files are encrypted before upload
+                  </p>
+                  {selectedFile && (
+                    <p className="text-sm text-green-600 mt-2">
+                      Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)}KB)
+                    </p>
+                  )}
+                </div>
+              </div>
 
               <FormField
                 control={form.control}

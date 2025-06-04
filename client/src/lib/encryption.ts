@@ -1,137 +1,129 @@
-import _sodium from 'libsodium-wrappers';
+import sodium from 'libsodium-wrappers';
 
-let sodium: typeof _sodium | null = null;
+let isInitialized = false;
+let adminPublicKey: Uint8Array | null = null;
 
-export const PUBLIC_KEY = import.meta.env.VITE_PUBLIC_KEY || "";
+/**
+ * Initialize libsodium and fetch admin public key
+ */
+export async function initializeEncryption(): Promise<void> {
+  if (isInitialized && adminPublicKey) {
+    return;
+  }
 
-// Fetch public key from server
-export async function fetchPublicKey(): Promise<string> {
   try {
+    // Initialize libsodium
+    await sodium.ready;
+    
+    // Fetch admin public key from server
     const response = await fetch('/api/admin/public-key');
     if (!response.ok) {
-      throw new Error('Failed to fetch public key');
+      throw new Error(`Failed to fetch public key: ${response.status}`);
     }
-    const data = await response.json();
-    return data.publicKey;
-  } catch (error) {
-    console.error('Failed to fetch public key from server:', error);
-    throw error;
-  }
-}
-
-export async function initializeEncryption(): Promise<boolean> {
-  try {
-    await _sodium.ready;
-    sodium = _sodium;
-    return true;
-  } catch (error) {
-    console.error("Failed to initialize libsodium:", error);
-    return false;
-  }
-}
-
-export async function encryptData(data: string): Promise<string> {
-  if (!sodium) {
-    const initialized = await initializeEncryption();
-    if (!initialized) {
-      throw new Error("Encryption library failed to initialize");
-    }
-  }
-
-  try {
-    // Get the public key from server or environment
-    let publicKeyBase64 = PUBLIC_KEY;
     
-    // If no public key is configured, fetch from server
-    if (!publicKeyBase64) {
-      try {
-        publicKeyBase64 = await fetchPublicKey();
-      } catch (error) {
-        throw new Error("Unable to obtain encryption public key");
-      }
+    const { publicKey } = await response.json();
+    if (!publicKey) {
+      throw new Error('No public key received from server');
     }
-
+    
     // Convert base64 public key to Uint8Array
-    const publicKey = sodium!.from_base64(publicKeyBase64);
+    adminPublicKey = sodium.from_base64(publicKey);
+    isInitialized = true;
     
-    // Convert string data to Uint8Array
-    const messageBytes = sodium!.from_string(data);
+    console.log('Client-side encryption initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize client-side encryption:', error);
+    throw new Error('Unable to initialize secure encryption. Please try again.');
+  }
+}
+
+/**
+ * Encrypt data using libsodium sealed box encryption
+ */
+export async function encryptData(plaintext: string): Promise<string> {
+  if (!isInitialized || !adminPublicKey) {
+    await initializeEncryption();
+  }
+  
+  if (!adminPublicKey) {
+    throw new Error('Encryption not properly initialized');
+  }
+  
+  try {
+    // Convert plaintext to Uint8Array
+    const plaintextBytes = sodium.from_string(plaintext);
     
     // Encrypt using sealed box (anonymous encryption)
-    const encryptedBytes = sodium!.crypto_box_seal(messageBytes, publicKey);
+    const ciphertext = sodium.crypto_box_seal(plaintextBytes, adminPublicKey);
     
-    // Create structured encrypted data with metadata and integrity verification
+    // Convert to base64 for storage
+    const ciphertextBase64 = sodium.to_base64(ciphertext);
+    
+    // Create the structured format expected by the backend
     const encryptedData = {
-      algorithm: "libsodium-sealed-box",
-      data: sodium!.to_base64(encryptedBytes),
-      publicKey: publicKeyBase64,
-      timestamp: Date.now(),
-      version: "1.0",
-      checksum: sodium!.to_base64(sodium!.crypto_generichash(32, messageBytes))
+      algorithm: 'libsodium-sealed-box',
+      data: ciphertextBase64,
+      checksum: sodium.to_hex(sodium.crypto_generichash(32, plaintextBytes))
     };
     
     return JSON.stringify(encryptedData);
   } catch (error) {
-    console.error("Encryption failed:", error);
-    throw new Error("Failed to encrypt data");
+    console.error('Encryption failed:', error);
+    throw new Error('Failed to encrypt data securely');
   }
 }
 
-// Generate a new keypair for the server (run this once to get keys)
-export async function generateKeyPair(): Promise<{ publicKey: string; privateKey: string }> {
-  if (!sodium) {
+/**
+ * Encrypt file content
+ */
+export async function encryptFile(file: File): Promise<string> {
+  if (!isInitialized || !adminPublicKey) {
     await initializeEncryption();
   }
   
-  const keyPair = sodium!.crypto_box_keypair();
-  
-  return {
-    publicKey: sodium!.to_base64(keyPair.publicKey),
-    privateKey: sodium!.to_base64(keyPair.privateKey)
-  };
-}
-
-// Generate signing keypair for message authentication
-export async function generateSigningKeyPair(): Promise<{ publicKey: string; privateKey: string }> {
-  if (!sodium) {
-    await initializeEncryption();
-  }
-  
-  const keyPair = sodium!.crypto_sign_keypair();
-  
-  return {
-    publicKey: sodium!.to_base64(keyPair.publicKey),
-    privateKey: sodium!.to_base64(keyPair.privateKey)
-  };
-}
-
-// Sign data with a private signing key for message integrity
-export async function signData(data: string, privateSigningKey: string): Promise<string> {
-  if (!sodium) {
-    await initializeEncryption();
-  }
-  
-  const privateKey = sodium!.from_base64(privateSigningKey);
-  const messageBytes = sodium!.from_string(data);
-  const signature = sodium!.crypto_sign_detached(messageBytes, privateKey);
-  
-  return sodium!.to_base64(signature);
-}
-
-// Verify message signature
-export async function verifySignature(data: string, signature: string, publicSigningKey: string): Promise<boolean> {
-  if (!sodium) {
-    await initializeEncryption();
+  if (!adminPublicKey) {
+    throw new Error('Encryption not properly initialized');
   }
   
   try {
-    const publicKey = sodium!.from_base64(publicSigningKey);
-    const messageBytes = sodium!.from_string(data);
-    const signatureBytes = sodium!.from_base64(signature);
+    // Read file as ArrayBuffer
+    const fileBuffer = await file.arrayBuffer();
+    const fileBytes = new Uint8Array(fileBuffer);
     
-    return sodium!.crypto_sign_verify_detached(signatureBytes, messageBytes, publicKey);
+    // Encrypt file content
+    const encryptedBytes = sodium.crypto_box_seal(fileBytes, adminPublicKey);
+    const encryptedBase64 = sodium.to_base64(encryptedBytes);
+    
+    // Create file metadata structure
+    const encryptedFileData = {
+      filename: file.name,
+      mimetype: file.type,
+      size: file.size,
+      algorithm: 'libsodium-sealed-box',
+      data: encryptedBase64,
+      checksum: sodium.to_hex(sodium.crypto_generichash(32, fileBytes))
+    };
+    
+    return JSON.stringify(encryptedFileData);
   } catch (error) {
-    console.error("Signature verification failed:", error);
-    return false;
+    console.error('File encryption failed:', error);
+    throw new Error('Failed to encrypt file securely');
   }
+}
+
+/**
+ * Check if encryption is properly initialized
+ */
+export function isEncryptionReady(): boolean {
+  return isInitialized && adminPublicKey !== null;
+}
+
+/**
+ * Get encryption status for debugging
+ */
+export function getEncryptionStatus(): { initialized: boolean; hasPublicKey: boolean } {
+  return {
+    initialized: isInitialized,
+    hasPublicKey: adminPublicKey !== null
+  };
 }

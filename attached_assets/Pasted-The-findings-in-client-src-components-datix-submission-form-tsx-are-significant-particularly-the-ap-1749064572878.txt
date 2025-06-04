@@ -1,0 +1,108 @@
+The findings in client/src/components/datix-submission-form.tsx are significant, particularly the apparent lack of client-side encryption logic within the form's submission handling itself. This contradicts the project's core security proposition of end-to-end encryption where data is encrypted on the user's device.
+Immediate Priority Action:
+The submitData function (imported from @/lib/queryClient) is the next critical point of investigation. It's possible the encryption logic is centralized there. If not, this is a major security flaw.
+Let's examine client/src/lib/queryClient.ts.
+The client/src/lib/queryClient.ts file defines utility functions for making API requests and configures the TanStack Query client.
+Key Findings:
+getCSRFToken(): Fetches a CSRF token from /api/csrf-token. This is used in subsequent non-GET requests.
+apiRequest(method: string, url: string, data?: unknown): A generic function for making API calls. It automatically adds Content-Type: application/json if data is present and includes the CSRF token for mutating requests.
+submitData(url: string, data: unknown): This is the function used by the DatixSubmissionForm.
+It sets Content-Type: application/json.
+It fetches and includes a CSRF token.
+It makes a POST request with the provided data (JSON stringified).
+Crucially, there is NO client-side encryption logic within this function. The data object received from DatixSubmissionForm is directly stringified and sent to the backend.
+getQueryFn: A factory for the default query function used by TanStack Query, handling basic fetch logic and an option for how to behave on 401 errors.
+queryClient: The TanStack Query client instance with default options (e.g., no automatic retries, no refetch on window focus, staleTime infinity).
+CONFIRMED: NO CLIENT-SIDE ENCRYPTION BEFORE SUBMISSION
+The submitData function in client/src/lib/queryClient.ts does not perform any encryption. It sends the data, as prepared by DatixSubmissionForm, directly to the backend after JSON stringification.
+This confirms the critical issue: the application, in its current state as reviewed, is not implementing client-side encryption for the submission data before it's sent to the server. This directly contradicts the "end-to-end encryption" and "data is encrypted on your device" claims in the README.md and UI.
+The backend (server/encryption.ts's decryptData function) expects an encrypted payload. Since the client is sending plaintext (JSON), the decryptData function on the server will inevitably fail when it tries to parse the plaintext JSON as its expected encrypted structure or when it tries to apply cryptographic operations.
+This is a high-severity security flaw given the project's stated goals and nature.
+Next Steps & Recommendations:
+Implement Client-Side Encryption:
+A client-side encryption module needs to be created or integrated, likely using libsodium-wrappers (to be consistent with the backend).
+This module should:
+Fetch the admin's public encryption key from the backend (/api/admin/public-key).
+Provide a function to encrypt the submission data (e.g., each sensitive field, or a JSON representation of the sensitive parts of the form) using the fetched public key (likely using crypto_box_seal if it's anonymous encryption to a public key).
+The output should match the format expected by the backend's decryptData function (e.g., a JSON string like {"algorithm": "libsodium-sealed-box", "data": "<base64_encrypted_content>", "checksum": "<optional_checksum>"}).
+In DatixSubmissionForm, before calling submitData, the submissionData object needs to have its sensitive fields individually encrypted, or the entire relevant payload needs to be encrypted and structured as expected by the backend.
+For example, encryptedMessage should contain the encrypted version of data.incidentDescription. encryptedContactDetails should contain the encrypted version of data.replyEmail, and so on for all fields marked as encrypted_* in the shared/schema.ts.
+File Upload and Encryption:
+The file upload functionality is currently missing from DatixSubmissionForm.
+When implemented, it must include:
+Reading file content on the client.
+(Optional but good) Metadata stripping on the client if possible, or at least be aware of what metadata is sent.
+Encrypting the file content using the admin's public key.
+Sending the encrypted file content (likely Base64 encoded) to the backend, in the encryptedFile field, structured as expected (e.g., similar JSON structure as encryptedMessage but for file data).
+Review Backend decryptData Expectations: Ensure the client-side encryption output format perfectly matches what server/encryption.ts decryptData expects for both messages and files.
+Update Documentation: Once client-side encryption is correctly implemented, ensure all documentation accurately reflects the process.
+This is a critical architectural component that needs to be built.
+Given the severity of this, I will stop the general review here to highlight this finding. Addressing the client-side encryption is paramount.
+Summary of Other Key Findings (previously mentioned):
+Security:
+Key Rotation Strategy (server/encryption.ts): The current "hard rotation" risks data loss. Needs a proper strategy.
+GDPR Search/Export Performance (server/routes.ts): Decrypting all submissions for search/export is not scalable.
+Consistency & Correctness:
+File Deletion Logic (server/routes.ts): fs.unlinkSync is incorrect as files are in the DB.
+Data Retention Period: Inconsistent (90 days in code/UI vs. 6 months in README).
+Project Name in package.json: rest-express instead of DAUK Whistle.
+Test Scripts in package.json: Missing scripts mentioned in README.
+Code Quality & Maintainability:
+Modularity of server/routes.ts: Very large file, needs splitting.
+Hardcoded Select Options in Form: Should be configurable.
+Boolean Representation in DB: varchar for booleans; consider native boolean type.
+Date/Time Fields in DB: varchar for date/time; consider native date/timestamp types.
+The project has a strong foundation in many areas (detailed README, good backend structure with Drizzle/Express, security headers, audit logging, use of TypeScript with strict settings, shadcn/ui for a modern UI). However, the client-side encryption gap is a major issue that needs to be addressed to meet its core promise.
+Do you want me to proceed with creating a plan to implement client-side encryption, or would you like to focus on other areas first? Given its importance, I strongly recommend addressing the encryption.You've correctly identified a critical flaw: the client-side encryption, a cornerstone of this project's security model, is not being performed before data submission. This means sensitive information is transmitted from the client to the server in plaintext, where the server then (attempts and likely fails to) decrypt it.
+This is the most important issue to address. I will outline a plan to implement client-side encryption.
+Plan to Implement Client-Side Encryption
+Create a Client-Side Encryption Service (client/src/lib/encryption.ts):
+This service will use libsodium-wrappers.
+Fetch Admin Public Key:
+It needs a function to fetch the admin's public encryption key from the backend endpoint (/api/admin/public-key). This key should be fetched once and cached/reused.
+Encryption Function:
+Create an encryptData(plaintext: string, publicKeyBase64: string): Promise<string> function.
+This function will take plaintext data and the admin's Base64 encoded public key.
+It will use sodium.crypto_box_seal() for encryption, which is suitable for encrypting a message to a recipient's public key without needing the sender's private key.
+The output should be a JSON string matching the backend's expected format:
+Apply to CODE_REVIEW_...
+}
+(The checksum helps verify data integrity after decryption on the server against the plaintext).
+File Encryption Function:
+Create an encryptFile(fileContent: ArrayBuffer, publicKeyBase64: string): Promise<string> function (or similar, handling File objects).
+This will encrypt the file content (read as ArrayBuffer or Uint8Array).
+The output structure should be similar to encryptData's output, potentially with added metadata like filename and MIME type if those also need to be part of the encrypted package (though the current backend seems to expect encryptedFile to be just the encrypted content, and filename/type are handled separately or inferred). The backend currently parses submission.encryptedFile as JSON that contains data, filename, and mimetype before any decryption attempt, which is problematic if the entire encryptedFile field is supposed to be the output of something like crypto_box_seal. This needs careful alignment.
+A more likely scenario based on the backend's current file download logic (JSON.parse(submission.encryptedFile)) is that the encryptedFile field in the database stores a JSON string containing metadata and the Base64-encoded encrypted file data.
+So, the client would:
+Encrypt the file binary -> encryptedFileBinary.
+Construct a JSON object: { filename: "...", mimetype: "...", data: sodium.to_base64(encryptedFileBinary) }.
+This entire JSON string would then be the value for the encryptedFile field in the main submission payload.
+The server-side decryptData function would then need to be adapted if it's used for files, or a separate file decryption utility would be needed that expects this structure. For now, let's assume encryptedFile is a field in the main submission payload that will itself be encrypted like other sensitive string fields if it contains sensitive metadata, or it will contain the pre-encrypted file content if only content is encrypted.
+Integrate Encryption into DatixSubmissionForm (client/src/components/datix-submission-form.tsx):
+Fetch Public Key: On component mount or before the first submission attempt, fetch the admin public key using the new encryption service. Store it in state or a ref. Handle cases where the key cannot be fetched.
+Modify mutationFn:
+Before calling submitData, iterate through the fields in submissionData that need encryption (e.g., encryptedMessage, encryptedContactDetails, encryptedReporterName, etc.).
+For each such field, if it has a value, call the encryptData function from the encryption service using the plaintext value and the fetched admin public key.
+Replace the plaintext value in submissionData with the encrypted JSON string.
+Example for incidentDescription:
+Apply to CODE_REVIEW_...
+}
+The names in submissionData (e.g., encryptedMessage) already match the backend schema. The values just need to be the actual encrypted ciphertexts.
+Implement File Upload and Encryption in DatixSubmissionForm:
+Add a file input field to the form.
+When a file is selected:
+Read the file content (e.g., as an ArrayBuffer).
+Optionally, implement client-side metadata stripping if feasible (libraries might exist, or focus on backend stripping).
+Call the encryptFile (or encryptData if it's just a string representation of the file) function from the encryption service.
+Store the resulting encrypted file string (the structured JSON string if that's the chosen path) in the form state.
+In the mutationFn, add this encrypted file string to the submissionData object under the encryptedFile key.
+Apply to CODE_REVIEW_...
+.
+Align Backend decryptData and File Handling:
+Ensure server/encryption.ts decryptData can correctly parse the JSON string structure produced by the client-side encryptData function and perform crypto_box_seal_open.
+Clarify how encrypted files are handled by the backend. If encryptedFile field contains a JSON string with metadata and base64 encrypted data, the backend logic needs to:
+Parse this outer JSON string from the encryptedFile field.
+Take the base64 encrypted data from parsedJson.data.
+Decrypt this using crypto_box_seal_open.
+This means the current file download logic on the server (JSON.parse(submission.encryptedFile) then using fileInfo.data directly) is assuming fileInfo.data is already decrypted or just base64 of original. This is part of the inconsistency. If fileInfo.data is encrypted, it needs decryption before being sent to the user.
+The most straightforward for "end-to-end" is that encryptedFile (like encryptedMessage) is itself the result of an encryption operation (the sealed box output, then perhaps base64 encoded and put into the JSON structure the decryptor expects).
