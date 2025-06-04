@@ -201,15 +201,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit encrypted whistleblowing report (with CSRF protection)
-  app.post("/api/submissions", csrfProtection, async (req, res) => {
+  app.post("/api/submit", submitRateLimit, csrfProtection, asyncHandler(async (req: Request, res: Response) => {
     try {
       // Validate request body
       const validatedData = insertSubmissionSchema.parse(req.body);
 
-      // Additional validation
-      if (!validatedData.encryptedMessage || validatedData.encryptedMessage.length < 10) {
-        res.status(400).json({ error: "Invalid message content" });
-        return;
+      // Validate encrypted message exists (now contains JSON encrypted data)
+      if (!validatedData.encryptedMessage) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      // Validate encrypted message is properly formatted JSON
+      try {
+        const encryptedMessageData = JSON.parse(validatedData.encryptedMessage);
+        if (!encryptedMessageData.algorithm || !encryptedMessageData.data) {
+          return res.status(400).json({ error: "Invalid encrypted message format" });
+        }
+      } catch (error) {
+        return res.status(400).json({ error: "Invalid encrypted message format" });
       }
 
       // Enhanced file validation if present
@@ -270,14 +279,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Validate email format if provided
-      if (validatedData.encryptedContactDetails && validatedData.contactMethod === 'email') {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(validatedData.encryptedContactDetails)) {
-          res.status(400).json({ error: "Invalid email format" });
-          return;
-        }
-      }
+      // Note: Email validation is now handled on the client side before encryption
+      // The encryptedContactDetails field contains encrypted data, not plaintext email
 
       // Create submission hash for deduplication
       const submissionHash = crypto
@@ -358,14 +361,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Submission error:", error);
       
       if (error instanceof Error && error.name === "ZodError") {
-        res.status(400).json({ error: "Invalid submission data" });
-        return;
+        return res.status(400).json({ error: "Invalid submission data" });
       }
       
-      res.status(500).json({ error: "Internal server error" });
-      return;
+      return res.status(500).json({ error: "Internal server error" });
     }
-  });
+  }));
 
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
