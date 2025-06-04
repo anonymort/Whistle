@@ -462,11 +462,11 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="submissions" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="submissions">Submissions</TabsTrigger>
-          <TabsTrigger value="investigators">Investigators</TabsTrigger>
-          <TabsTrigger value="reporting">Regulatory Reporting</TabsTrigger>
-          <TabsTrigger value="gdpr-sar">GDPR Data Requests</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto p-1">
+          <TabsTrigger value="submissions" className="text-xs sm:text-sm px-2 py-2">Submissions</TabsTrigger>
+          <TabsTrigger value="investigators" className="text-xs sm:text-sm px-2 py-2">Investigators</TabsTrigger>
+          <TabsTrigger value="reporting" className="text-xs sm:text-sm px-2 py-2">Reporting</TabsTrigger>
+          <TabsTrigger value="gdpr-sar" className="text-xs sm:text-sm px-2 py-2">GDPR SAR</TabsTrigger>
         </TabsList>
 
         <TabsContent value="submissions" className="space-y-4">
