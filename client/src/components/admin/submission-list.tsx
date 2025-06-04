@@ -106,10 +106,10 @@ export default function SubmissionList({
 
         return (
           <Card key={submission.id} className="w-full">
-            <CardContent className="p-3 sm:p-4 lg:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="flex-1 space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                     <Badge className={getStatusColor(submission.status)}>
                       {submission.status}
                     </Badge>
@@ -175,35 +175,35 @@ export default function SubmissionList({
                   )}
                 </div>
 
-                <div className="flex flex-row sm:flex-col space-x-2 sm:space-x-0 sm:space-y-2 sm:ml-4 w-full sm:w-auto">
+                <div className="flex flex-wrap gap-2 mt-2">
                   <Button
                     onClick={() => onDecrypt(submission)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center justify-center space-x-1 flex-1 sm:flex-none"
+                    className="flex items-center justify-center gap-1 min-h-[40px] px-3"
                   >
                     <Eye className="w-4 h-4" />
-                    <span className="hidden sm:inline">View</span>
+                    <span className="text-xs sm:text-sm">View</span>
                   </Button>
                   
                   <Button
                     onClick={() => onViewNotes(submission)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center justify-center space-x-1 flex-1 sm:flex-none"
+                    className="flex items-center justify-center gap-1 min-h-[40px] px-3"
                   >
                     <MessageSquare className="w-4 h-4" />
-                    <span className="hidden sm:inline">Notes</span>
+                    <span className="text-xs sm:text-sm">Notes</span>
                   </Button>
                   
                   <Button
                     onClick={() => onDelete(submission.id)}
                     variant="destructive"
                     size="sm"
-                    className="flex items-center justify-center space-x-1 flex-1 sm:flex-none"
+                    className="flex items-center justify-center gap-1 min-h-[40px] px-3"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Delete</span>
+                    <span className="text-xs sm:text-sm">Delete</span>
                   </Button>
                 </div>
               </div>

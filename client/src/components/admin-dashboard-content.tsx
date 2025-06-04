@@ -344,10 +344,10 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">Manage submissions and investigators</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Manage submissions and investigators</p>
         </div>
         <div className="flex items-center space-x-2 sm:space-x-4">
           <Dialog open={keyRotationDialogOpen} onOpenChange={setKeyRotationDialogOpen}>

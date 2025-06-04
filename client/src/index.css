@@ -4,6 +4,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile optimization */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100vh;
+  touch-action: manipulation;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 20 14.3% 4.1%;
