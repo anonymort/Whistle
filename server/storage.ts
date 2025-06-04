@@ -3,6 +3,7 @@ import {
   auditLogs, 
   caseNotes, 
   investigators,
+  aliasMapping,
   type Submission, 
   type InsertSubmission, 
   type UpdateSubmission,
@@ -11,7 +12,9 @@ import {
   type CaseNote,
   type InsertCaseNote,
   type Investigator,
-  type InsertInvestigator
+  type InsertInvestigator,
+  type AliasMapping,
+  type InsertAliasMapping
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, lt, sql, desc } from "drizzle-orm";

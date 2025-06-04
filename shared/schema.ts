@@ -40,8 +40,8 @@ export const submissions = pgTable("submissions", {
   verificationStatus: varchar("verification_status", { length: 50 }).notNull().default("pending"),
   legalReviewStatus: varchar("legal_review_status", { length: 50 }).notNull().default("not_required"),
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
-  // Anonymous Reply Service Data
-  simpleloginAliasId: varchar("simplelogin_alias_id", { length: 50 }),
+  // Postmark Anonymous Reply Service Data
+  postmarkAliasId: varchar("postmark_alias_id", { length: 50 }),
   encryptedAliasEmail: text("encrypted_alias_email"),
   // Data Management
   requiresEscalation: varchar("requires_escalation", { length: 10 }).notNull().default("false"),
@@ -80,6 +80,16 @@ export const investigators = pgTable("investigators", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const aliasMapping = pgTable("alias_mapping", {
+  id: serial("id").primaryKey(),
+  alias: varchar("alias", { length: 255 }).notNull().unique(),
+  investigatorEmail: varchar("investigator_email", { length: 255 }).notNull(),
+  submissionId: varchar("submission_id", { length: 50 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isActive: varchar("is_active", { length: 10 }).notNull().default("true"),
+});
+
 export const insertSubmissionSchema = createInsertSchema(submissions).pick({
   encryptedMessage: true,
   encryptedFile: true,
@@ -108,8 +118,8 @@ export const insertSubmissionSchema = createInsertSchema(submissions).pick({
   evidenceType: true,
   witnessesPresent: true,
   encryptedWitnessDetails: true,
-  // SimpleLogin fields
-  simpleloginAliasId: true,
+  // Postmark fields
+  postmarkAliasId: true,
   encryptedAliasEmail: true,
 });
 
@@ -145,6 +155,14 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).pick({
   details: true,
   ipAddress: true,
   userAgent: true,
+});
+
+export const insertAliasMappingSchema = createInsertSchema(aliasMapping).pick({
+  alias: true,
+  investigatorEmail: true,
+  submissionId: true,
+  expiresAt: true,
+  isActive: true,
 });
 
 // Status and Priority enums
@@ -192,3 +210,5 @@ export type InsertInvestigator = z.infer<typeof insertInvestigatorSchema>;
 export type Investigator = typeof investigators.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAliasMapping = z.infer<typeof insertAliasMappingSchema>;
+export type AliasMapping = typeof aliasMapping.$inferSelect;
