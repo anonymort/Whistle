@@ -7,6 +7,7 @@ import InvestigatorManagement from "@/components/admin/investigator-management";
 import CaseNotesPanel from "@/components/admin/case-notes-panel";
 import SubmissionDetails from "@/components/admin/submission-details";
 import AggregatedReporting from "@/components/admin/aggregated-reporting";
+import GDPRDataRequestPanel from "@/components/admin/gdpr-data-request-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -465,6 +466,7 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
           <TabsTrigger value="investigators">Investigators</TabsTrigger>
           <TabsTrigger value="reporting">Regulatory Reporting</TabsTrigger>
+          <TabsTrigger value="gdpr-sar">GDPR Data Requests</TabsTrigger>
         </TabsList>
 
         <TabsContent value="submissions" className="space-y-4">
@@ -555,6 +557,27 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
             timeRange={reportingTimeRange}
             onTimeRangeChange={setReportingTimeRange}
           />
+        </TabsContent>
+
+        <TabsContent value="gdpr-sar" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Shield className="w-5 h-5" />
+                <span>GDPR Subject Access Requests</span>
+              </CardTitle>
+              <CardDescription>
+                Search and export personal data to fulfill GDPR Article 15 requests. 
+                Individuals have the right to access their personal data within 30 days of request.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GDPRDataRequestPanel 
+                submissions={submissions}
+                onDecrypt={handleDecrypt}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
