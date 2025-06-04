@@ -16,24 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { submitData, apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 
-interface Submission {
-  id: number;
-  encryptedMessage: string;
-  encryptedFile: string | null;
-  contactMethod: string | null;
-  encryptedContactDetails: string | null;
-  hospitalTrust: string | null;
-  sha256Hash: string;
-  submittedAt: Date;
-  status: string;
-  priority: string;
-  assignedTo: string | null;
-  category: string | null;
-  eventDate: string | null;
-  eventTime: string | null;
-  riskLevel: string;
-  lastUpdated: Date;
-}
+// Import types from shared schema instead of redefining them
+import type { Submission, CaseNote, Investigator } from "@shared/schema";
 
 interface CaseNote {
   id: number;
@@ -89,7 +73,14 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
     enabled: !!selectedSubmission?.id,
   });
 
-  const { data: stats = { total: 0, new: 0, investigating: 0, critical: 0, withFiles: 0, urgent: 0 } } = useQuery({
+  const { data: stats = { total: 0, new: 0, investigating: 0, critical: 0, withFiles: 0, urgent: 0 } } = useQuery<{
+    total: number;
+    new: number;
+    investigating: number;
+    critical: number;
+    withFiles: number;
+    urgent: number;
+  }>({
     queryKey: ['/api/admin/stats'],
   });
 
@@ -598,13 +589,8 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
         caseNotes={caseNotes}
         open={notesDialogOpen}
         onOpenChange={setNotesDialogOpen}
-        onAddNote={(note, noteType, isInternal) => 
-          createCaseNoteMutation.mutate({
-            submissionId: selectedSubmission!.id,
-            note,
-            noteType,
-            isInternal
-          })
+        onAddNote={(data) => 
+          createCaseNoteMutation.mutate(data)
         }
         onDeleteNote={(noteId) => deleteCaseNoteMutation.mutate(noteId)}
         isAddingNote={createCaseNoteMutation.isPending}
