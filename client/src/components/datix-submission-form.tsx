@@ -313,9 +313,16 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
                       </FormItem>
                     )}
                   />
-                </div>
-              )}
+              </div>
+            </CardContent>
+          </Card>
 
+          {/* Reporter Relationship */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Incident Relationship</CardTitle>
+            </CardHeader>
+            <CardContent>
               <FormField
                 control={form.control}
                 name="reporterRelationship"
