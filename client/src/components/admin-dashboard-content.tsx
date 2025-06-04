@@ -383,13 +383,13 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
         <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center space-x-2">
-              <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{stats.total || 0}</p>
+          <CardContent className="p-2 sm:p-3 lg:p-4">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{stats.total || 0}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
               </div>
             </div>
@@ -397,11 +397,11 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
         </Card>
         
         <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600" />
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'new').length}</p>
+          <CardContent className="p-2 sm:p-3 lg:p-4">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-yellow-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{submissions.filter((s: Submission) => s.status === 'new').length}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">New</p>
               </div>
             </div>
@@ -409,11 +409,11 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
         </Card>
         
         <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center space-x-2">
-              <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.status === 'investigating').length}</p>
+          <CardContent className="p-2 sm:p-3 lg:p-4">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <Eye className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-green-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{submissions.filter((s: Submission) => s.status === 'investigating').length}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Investigating</p>
               </div>
             </div>
@@ -421,11 +421,11 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
         </Card>
         
         <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.priority === 'critical').length}</p>
+          <CardContent className="p-2 sm:p-3 lg:p-4">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-red-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{submissions.filter((s: Submission) => s.priority === 'critical').length}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Critical</p>
               </div>
             </div>
@@ -433,11 +433,11 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
         </Card>
         
         <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center space-x-2">
-              <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => s.encryptedFile).length}</p>
+          <CardContent className="p-2 sm:p-3 lg:p-4">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-purple-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{submissions.filter((s: Submission) => s.encryptedFile).length}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">With Files</p>
               </div>
             </div>
@@ -445,11 +445,11 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
         </Card>
 
         <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{submissions.filter((s: Submission) => {
+          <CardContent className="p-2 sm:p-3 lg:p-4">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-orange-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{submissions.filter((s: Submission) => {
                   const daysSinceSubmission = Math.floor((Date.now() - new Date(s.submittedAt).getTime()) / (1000 * 60 * 60 * 24));
                   return daysSinceSubmission <= 7;
                 }).length}</p>

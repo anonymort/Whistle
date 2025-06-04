@@ -232,14 +232,14 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+              <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200 mb-4">
                 <p className="text-sm text-blue-800">
                   <strong>Identity Information:</strong> Providing your details helps investigators handle your case effectively. 
                   All information is encrypted and protected according to GDPR requirements.
                 </p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <FormField
                   control={form.control}
                   name="reporterName"
@@ -375,7 +375,7 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <FormField
                   control={form.control}
                   name="hospitalTrust"
