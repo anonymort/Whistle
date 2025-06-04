@@ -82,7 +82,7 @@ export default function SubmissionDetails({
   const assignedInvestigator = investigators.find(inv => inv.name === submission.assignedTo);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -191,7 +191,7 @@ export default function SubmissionDetails({
                           setAssignTo('');
                         }
                       }}
-                      disabled={!assignTo || isUpdating}
+                      disabled={!assignTo}
                       size="sm"
                     >
                       Assign
@@ -229,7 +229,7 @@ export default function SubmissionDetails({
                           setNewStatus('');
                         }
                       }}
-                      disabled={!newStatus || isUpdating}
+                      disabled={!newStatus}
                       size="sm"
                     >
                       Update
@@ -258,7 +258,7 @@ export default function SubmissionDetails({
                           setNewPriority('');
                         }
                       }}
-                      disabled={!newPriority || isUpdating}
+                      disabled={!newPriority}
                       size="sm"
                     >
                       Update
@@ -301,7 +301,15 @@ export default function SubmissionDetails({
                           <span className="font-medium">Attached File</span>
                         </div>
                         <Button
-                          onClick={() => onDownloadFile(decryptedData.fileData!, decryptedData.fileName!)}
+                          onClick={() => {
+                            const blob = new Blob([decryptedData.fileData!], { type: 'application/octet-stream' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = decryptedData.fileName!;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
                           variant="outline"
                           size="sm"
                           className="flex items-center space-x-1"
