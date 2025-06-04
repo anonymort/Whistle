@@ -40,6 +40,12 @@ export interface IStorage {
   getInvestigatorByEmail(email: string): Promise<Investigator | undefined>;
   getInvestigatorById(id: number): Promise<Investigator | undefined>;
   getAssignedSubmissions(investigatorName: string): Promise<Submission[]>;
+  // Alias Mapping
+  createAliasMapping(aliasMapping: InsertAliasMapping): Promise<AliasMapping>;
+  getAliasByEmail(alias: string): Promise<AliasMapping | undefined>;
+  getActiveAliases(): Promise<AliasMapping[]>;
+  deactivateAlias(alias: string): Promise<void>;
+  cleanupExpiredAliases(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -209,6 +215,47 @@ export class DatabaseStorage implements IStorage {
       .where(eq(submissions.assignedTo, investigatorName))
       .orderBy(submissions.submittedAt);
     return submissionData;
+  }
+
+  // Alias Mapping operations
+  async createAliasMapping(insertAliasMapping: InsertAliasMapping): Promise<AliasMapping> {
+    const [mapping] = await db
+      .insert(aliasMapping)
+      .values(insertAliasMapping)
+      .returning();
+    return mapping;
+  }
+
+  async getAliasByEmail(alias: string): Promise<AliasMapping | undefined> {
+    const [mapping] = await db
+      .select()
+      .from(aliasMapping)
+      .where(eq(aliasMapping.alias, alias));
+    return mapping || undefined;
+  }
+
+  async getActiveAliases(): Promise<AliasMapping[]> {
+    return await db
+      .select()
+      .from(aliasMapping)
+      .where(eq(aliasMapping.isActive, "true"))
+      .orderBy(desc(aliasMapping.createdAt));
+  }
+
+  async deactivateAlias(alias: string): Promise<void> {
+    await db
+      .update(aliasMapping)
+      .set({ isActive: "false" })
+      .where(eq(aliasMapping.alias, alias));
+  }
+
+  async cleanupExpiredAliases(): Promise<number> {
+    const result = await db
+      .update(aliasMapping)
+      .set({ isActive: "false" })
+      .where(lt(aliasMapping.expiresAt, new Date()));
+    
+    return result.rowCount || 0;
   }
 }
 

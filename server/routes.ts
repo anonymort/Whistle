@@ -10,7 +10,7 @@ import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
 import { verifyPassword, hashPassword } from "./auth";
 import { auditLogger, AUDIT_ACTIONS } from "./audit";
-import { createAnonymousReplyService } from "./simplelogin";
+import { createAnonymousAlias, sendCaseAssignment, handleInboundEmail } from "./postmark";
 import { generateCSRFToken, csrfProtection } from "./csrf";
 import { errorHandler, asyncHandler, ValidationError, AuthenticationError } from "./error-handler";
 
@@ -292,16 +292,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle anonymous reply service setup
       if (validatedData.contactMethod === 'anonymous_reply') {
         try {
-          const anonymousService = await createAnonymousReplyService(submissionHash.substring(0, 12));
+          const aliasInfo = await createAnonymousAlias(
+            submissionHash.substring(0, 12),
+            'admin@dauk.org'
+          );
           submissionData = {
             ...submissionData,
-            simpleloginAliasId: anonymousService.aliasId.toString(),
-            encryptedAliasEmail: anonymousService.aliasEmail,
-            encryptedContactDetails: anonymousService.anonymousId,
+            encryptedAliasEmail: aliasInfo.alias,
+            encryptedContactDetails: aliasInfo.alias,
             hasOngoingCorrespondence: "true"
           };
           
-          console.log(`Created SimpleLogin alias for submission: ${anonymousService.aliasEmail}`);
+          console.log(`Created Postmark alias for submission: ${aliasInfo.alias}`);
         } catch (error) {
           console.error('Failed to create anonymous reply service:', error);
           // Fall back to standard anonymous submission
