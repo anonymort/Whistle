@@ -15,15 +15,28 @@ import { useToast } from "@/hooks/use-toast";
 import { submitData } from "@/lib/queryClient";
 import { Shield, FileText, AlertTriangle, User, MapPin, Clock } from "lucide-react";
 
-const submissionSchema = z.object({
-  // Identity Section (Recommended for better investigation)
+// Dynamic schema that validates based on contact method
+const createSubmissionSchema = (contactMethod: string) => z.object({
+  // Identity Section (Required for non-anonymous submissions)
   contactMethod: z.enum(["anonymous", "email", "anonymous_reply"]).default("email"),
-  reporterName: z.string().optional(),
-  jobTitle: z.string().optional(),
-  department: z.string().optional(),
+  reporterName: contactMethod === "anonymous" 
+    ? z.string().optional() 
+    : z.string().min(2, "Reporter name is required (minimum 2 characters)"),
+  jobTitle: contactMethod === "anonymous" 
+    ? z.string().optional() 
+    : z.string().min(2, "Job title is required for proper context"),
+  department: contactMethod === "anonymous" 
+    ? z.string().optional() 
+    : z.string().min(2, "Department is required for case routing"),
   staffId: z.string().optional(),
-  replyEmail: z.string().optional(),
-  reporterRelationship: z.enum(["involved", "witness", "second_hand"]).optional(),
+  replyEmail: contactMethod === "email" 
+    ? z.string().email("Valid email address required").min(1, "Email is required for updates")
+    : z.string().optional(),
+  reporterRelationship: contactMethod === "anonymous" 
+    ? z.enum(["involved", "witness", "second_hand"]).optional() 
+    : z.enum(["involved", "witness", "second_hand"], {
+        required_error: "Please specify your relationship to the incident"
+      }),
   
   // Incident Details
   incidentDescription: z.string().min(10, "Please provide detailed description (minimum 10 characters)"),
@@ -46,7 +59,7 @@ const submissionSchema = z.object({
   witnessDetails: z.string().optional(),
 });
 
-type SubmissionFormData = z.infer<typeof submissionSchema>;
+type SubmissionFormData = z.infer<ReturnType<typeof createSubmissionSchema>>;
 
 interface DatixSubmissionFormProps {
   onSuccess: () => void;
@@ -54,14 +67,13 @@ interface DatixSubmissionFormProps {
 
 export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showIdentityFields, setShowIdentityFields] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<SubmissionFormData>({
-    resolver: zodResolver(submissionSchema),
+    resolver: zodResolver(createSubmissionSchema("email")),
     defaultValues: {
-      contactMethod: "anonymous",
+      contactMethod: "email",
       riskLevel: "medium",
       patientSafetyImpact: "none",
       witnessesPresent: false,
@@ -217,25 +229,25 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
                   <User className="w-5 h-5" />
                   <span>Reporter Information</span>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowIdentityFields(!showIdentityFields)}
-                >
-                  {showIdentityFields ? "Hide" : "Show"} Identity Fields
-                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {showIdentityFields && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="reporterName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name (Optional)</FormLabel>
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Identity Information:</strong> Providing your details helps investigators handle your case effectively. 
+                  All information is encrypted and protected according to GDPR requirements.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="reporterName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Full Name {contactMethod !== "anonymous" ? "(Required)" : "(Optional)"}
+                      </FormLabel>
                         <FormControl>
                           <Input
                             {...field}
