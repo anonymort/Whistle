@@ -16,13 +16,13 @@ import { submitData } from "@/lib/queryClient";
 import { Shield, FileText, AlertTriangle, User, MapPin, Clock } from "lucide-react";
 
 const submissionSchema = z.object({
-  // Identity Section (Optional but recommended)
-  contactMethod: z.enum(["anonymous", "email", "anonymous_reply"]).default("anonymous"),
+  // Identity Section (Recommended for better investigation)
+  contactMethod: z.enum(["anonymous", "email", "anonymous_reply"]).default("email"),
   reporterName: z.string().optional(),
   jobTitle: z.string().optional(),
   department: z.string().optional(),
   staffId: z.string().optional(),
-  replyEmail: z.string().email().optional().or(z.literal("")),
+  replyEmail: z.string().optional(),
   reporterRelationship: z.enum(["involved", "witness", "second_hand"]).optional(),
   
   // Incident Details

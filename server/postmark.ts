@@ -322,6 +322,152 @@ Case communications are confidential and protected under UK whistleblowing legis
 export const postmarkService = new PostmarkService();
 
 /**
+ * Send submission confirmation email with GDPR compliance information
+ */
+export async function sendSubmissionConfirmation(
+  recipientEmail: string,
+  submissionData: any,
+  submissionId: string,
+  anonymousAlias?: string
+): Promise<boolean> {
+  const isAnonymous = submissionData.contactMethod === 'anonymous';
+  const hasAnonymousReply = submissionData.contactMethod === 'anonymous_reply';
+  
+  const emailData = {
+    From: 'noreply@dauk.org',
+    To: recipientEmail,
+    Subject: `[DAUK] Submission Confirmation - Case #${submissionId}`,
+    HtmlBody: `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; color: #333;">
+        <div style="background: #1e40af; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">DAUK Whistleblowing Portal</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Submission Confirmation</p>
+        </div>
+        
+        <div style="padding: 30px; background: white;">
+          <h2 style="color: #1e40af; margin-bottom: 20px;">Thank you for your submission</h2>
+          
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Case Reference:</strong> ${submissionId}</p>
+            <p><strong>Submission Date:</strong> ${new Date().toLocaleDateString('en-GB')}</p>
+            <p><strong>Hospital/Trust:</strong> ${submissionData.hospitalTrust || 'Not specified'}</p>
+            <p><strong>Incident Location:</strong> ${submissionData.incidentLocation || 'Not specified'}</p>
+            <p><strong>Risk Level:</strong> ${submissionData.riskLevel || 'Medium'}</p>
+            <p><strong>Reporter Name:</strong> ${submissionData.encryptedReporterName || 'Anonymous'}</p>
+            <p><strong>Job Title:</strong> ${submissionData.encryptedJobTitle || 'Not specified'}</p>
+            <p><strong>Department:</strong> ${submissionData.encryptedDepartment || 'Not specified'}</p>
+          </div>
+
+          ${hasAnonymousReply && anonymousAlias ? `
+          <div style="background: #ecfdf5; border: 1px solid #10b981; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #047857; margin-top: 0;">Anonymous Communication Setup</h3>
+            <p><strong>Your anonymous email address:</strong> <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">${anonymousAlias}</code></p>
+            <p>Use this email address for secure, anonymous communication with our investigators. Your identity will remain protected.</p>
+          </div>
+          ` : ''}
+
+          <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #92400e; margin-top: 0;">Important Information</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li><strong>Confidentiality:</strong> Your submission is treated with the highest confidentiality</li>
+              <li><strong>Investigation:</strong> A qualified investigator will review your case within 48 hours</li>
+              <li><strong>Protection:</strong> DAUK provides protection against detriment for whistleblowers</li>
+              <li><strong>Updates:</strong> ${isAnonymous ? 'No updates will be sent to maintain anonymity' : hasAnonymousReply ? 'Updates will be sent to your anonymous email address' : 'Updates will be sent to your provided email address'}</li>
+            </ul>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #374151; margin-top: 0;">Data Protection & Your Rights</h3>
+            <p style="font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
+              Your personal data is processed in accordance with GDPR and the Data Protection Act 2018. 
+              We process your information to investigate your concern and protect patient safety.
+            </p>
+            <p style="font-size: 14px; line-height: 1.6; margin-bottom: 15px;"><strong>Your rights include:</strong></p>
+            <ul style="font-size: 14px; margin: 0; padding-left: 20px;">
+              <li>Right to access your personal data</li>
+              <li>Right to rectification of inaccurate data</li>
+              <li>Right to erasure (in certain circumstances)</li>
+              <li>Right to restrict processing</li>
+              <li>Right to data portability</li>
+            </ul>
+            <p style="font-size: 14px; line-height: 1.6; margin-top: 15px;">
+              <strong>Data Retention:</strong> Your submission will be retained for 6 months from the date of submission, 
+              after which it will be automatically deleted unless ongoing legal proceedings require retention.
+            </p>
+            <p style="font-size: 14px; line-height: 1.6; margin-top: 15px;">
+              To exercise your rights or for data protection queries, contact our Data Protection Officer at: 
+              <a href="mailto:dpo@dauk.org" style="color: #1e40af;">dpo@dauk.org</a>
+            </p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #6b7280; font-size: 14px;">
+              For urgent concerns contact: <a href="mailto:urgent@dauk.org" style="color: #1e40af;">urgent@dauk.org</a><br>
+              For general enquiries: <a href="mailto:info@dauk.org" style="color: #1e40af;">info@dauk.org</a>
+            </p>
+          </div>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #6b7280; font-size: 12px;">
+            Doctors' Association UK (DAUK) | Confidential Whistleblowing Service<br>
+            This email contains confidential information. If received in error, please delete and notify sender.
+          </p>
+        </div>
+      </div>
+    `,
+    TextBody: `
+DAUK Whistleblowing Portal - Submission Confirmation
+
+Thank you for your submission.
+
+Case Reference: ${submissionId}
+Submission Date: ${new Date().toLocaleDateString('en-GB')}
+Hospital/Trust: ${submissionData.hospitalTrust || 'Not specified'}
+Incident Location: ${submissionData.incidentLocation || 'Not specified'}
+Risk Level: ${submissionData.riskLevel || 'Medium'}
+Reporter Name: ${submissionData.encryptedReporterName || 'Anonymous'}
+Job Title: ${submissionData.encryptedJobTitle || 'Not specified'}
+Department: ${submissionData.encryptedDepartment || 'Not specified'}
+
+${hasAnonymousReply && anonymousAlias ? `
+ANONYMOUS COMMUNICATION SETUP
+Your anonymous email address: ${anonymousAlias}
+Use this email address for secure, anonymous communication with our investigators.
+` : ''}
+
+IMPORTANT INFORMATION:
+- Your submission is treated with the highest confidentiality
+- A qualified investigator will review your case within 48 hours
+- DAUK provides protection against detriment for whistleblowers
+- ${isAnonymous ? 'No updates will be sent to maintain anonymity' : hasAnonymousReply ? 'Updates will be sent to your anonymous email address' : 'Updates will be sent to your provided email address'}
+
+DATA PROTECTION & YOUR RIGHTS:
+Your personal data is processed in accordance with GDPR and the Data Protection Act 2018.
+
+Your rights include:
+- Right to access your personal data
+- Right to rectification of inaccurate data  
+- Right to erasure (in certain circumstances)
+- Right to restrict processing
+- Right to data portability
+
+Data Retention: Your submission will be retained for 6 months from the date of submission, after which it will be automatically deleted unless ongoing legal proceedings require retention.
+
+To exercise your rights or for data protection queries, contact our Data Protection Officer at: dpo@dauk.org
+
+For urgent concerns: urgent@dauk.org
+For general enquiries: info@dauk.org
+
+Doctors' Association UK (DAUK) | Confidential Whistleblowing Service
+    `,
+    MessageStream: 'outbound'
+  };
+
+  return await postmarkService.sendEmail(emailData);
+}
+
+/**
  * Create anonymous alias mapping for a submission
  */
 export async function createAnonymousAlias(

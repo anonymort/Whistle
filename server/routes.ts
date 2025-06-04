@@ -11,7 +11,7 @@ import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
 import { verifyPassword, hashPassword } from "./auth";
 import { auditLogger, AUDIT_ACTIONS } from "./audit";
-import { createAnonymousAlias, sendCaseAssignment, handleInboundEmail } from "./postmark";
+import { createAnonymousAlias, sendCaseAssignment, handleInboundEmail, sendSubmissionConfirmation } from "./postmark";
 import { generateCSRFToken, csrfProtection } from "./csrf";
 import { errorHandler, asyncHandler, ValidationError, AuthenticationError } from "./error-handler";
 
@@ -316,14 +316,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Store the submission
-      const submission = await storage.createSubmission(submissionData);
+      const newSubmission = await storage.createSubmission(submissionData);
+
+      // Send confirmation email if contact details provided
+      let emailSent = false;
+      if (validatedData.contactMethod === 'email' && validatedData.encryptedContactDetails) {
+        try {
+          emailSent = await sendSubmissionConfirmation(
+            validatedData.encryptedContactDetails,
+            submissionData,
+            newSubmission.id.toString()
+          );
+        } catch (error) {
+          console.error("Failed to send confirmation email:", error);
+        }
+      } else if (validatedData.contactMethod === 'anonymous_reply' && submissionData.encryptedAliasEmail) {
+        try {
+          emailSent = await sendSubmissionConfirmation(
+            submissionData.encryptedAliasEmail,
+            submissionData,
+            newSubmission.id.toString(),
+            submissionData.encryptedAliasEmail
+          );
+        } catch (error) {
+          console.error("Failed to send anonymous confirmation email:", error);
+        }
+      }
 
       // Clean up old submissions (90-day retention)
       await storage.purgeOldSubmissions();
 
       res.status(201).json({ 
         message: "Submission received successfully",
-        reference: submissionHash.substring(0, 8) // Use hash prefix instead of sequential ID
+        reference: submissionHash.substring(0, 8), // Use hash prefix instead of sequential ID
+        submissionId: newSubmission.id,
+        anonymousReplyEmail: submissionData.encryptedAliasEmail,
+        confirmationEmailSent: emailSent
       });
 
     } catch (error) {
