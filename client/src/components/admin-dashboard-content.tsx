@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Shield, Users, FileText, Trash2, Eye, Clock, AlertTriangle, LogOut, Key, RotateCcw, Download, TrendingUp, CheckCircle, CircleX, AlertCircle, Pause, Settings, BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
-import AnalyticsDashboard from "@/components/analytics-dashboard";
+
 import SubmissionFilters from "@/components/admin/submission-filters";
 import SubmissionList from "@/components/admin/submission-list";
 import InvestigatorManagement from "@/components/admin/investigator-management";
@@ -505,7 +505,6 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardConten
         <TabsList>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
           <TabsTrigger value="investigators">Investigators</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="submissions" className="space-y-4">
