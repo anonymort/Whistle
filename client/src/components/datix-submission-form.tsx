@@ -754,11 +754,33 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isSubmitting}
+                disabled={isSubmitting || !encryptionReady}
                 size="lg"
               >
-                {isSubmitting ? "Submitting Securely..." : "Submit Incident Report"}
+                {!encryptionReady ? (
+                  <>
+                    <Lock className="w-4 h-4 mr-2 animate-spin" />
+                    Initializing Encryption...
+                  </>
+                ) : isSubmitting ? (
+                  <>
+                    <Lock className="w-4 h-4 mr-2" />
+                    Encrypting & Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 mr-2" />
+                    Submit Encrypted Report
+                  </>
+                )}
               </Button>
+              
+              {encryptionReady && (
+                <p className="text-xs text-green-600 mt-2 text-center">
+                  <Lock className="inline w-3 h-3 mr-1" />
+                  End-to-end encryption ready
+                </p>
+              )}
             </CardContent>
           </Card>
         </form>
