@@ -7,61 +7,32 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
-
-interface Submission {
-  id: number;
-  encryptedMessage: string;
-  encryptedFile: string | null;
-  replyEmail: string | null;
-  hospitalTrust: string | null;
-  sha256Hash: string;
-  submittedAt: Date;
-  status: string;
-  priority: string;
-  assignedTo: string | null;
-  category: string | null;
-  eventDate: string | null;
-  eventTime: string | null;
-  riskLevel: string;
-  lastUpdated: Date;
-}
-
-interface Investigator {
-  id: number;
-  name: string;
-  email: string;
-  department: string | null;
-  isActive: string;
-}
+import type { Submission, Investigator } from "@shared/schema";
 
 interface SubmissionDetailsProps {
-  isOpen: boolean;
-  onClose: () => void;
   submission: Submission | null;
   decryptedData: {
     message: string;
     fileName?: string;
     fileData?: string;
   } | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   investigators: Investigator[];
   onAssign: (submissionId: number, investigatorName: string) => void;
   onStatusChange: (submissionId: number, status: string) => void;
   onPriorityChange: (submissionId: number, priority: string) => void;
-  onDownloadFile: (fileData: string, fileName: string) => void;
-  isUpdating: boolean;
 }
 
 export default function SubmissionDetails({
-  isOpen,
-  onClose,
   submission,
   decryptedData,
+  open,
+  onOpenChange,
   investigators,
   onAssign,
   onStatusChange,
-  onPriorityChange,
-  onDownloadFile,
-  isUpdating
+  onPriorityChange
 }: SubmissionDetailsProps) {
   const [assignTo, setAssignTo] = useState('');
   const [newStatus, setNewStatus] = useState('');
@@ -167,8 +138,8 @@ export default function SubmissionDetails({
                   <p className="font-medium">{submission.category?.replace('_', ' ') || 'Not specified'}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Reply Email:</span>
-                  <p className="font-medium">{submission.replyEmail || 'Not provided'}</p>
+                  <span className="text-muted-foreground">Contact Method:</span>
+                  <p className="font-medium">{submission.contactMethod || 'Anonymous'}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Full Hash ID:</span>

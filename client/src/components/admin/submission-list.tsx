@@ -3,33 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-
-interface Submission {
-  id: number;
-  encryptedMessage: string;
-  encryptedFile: string | null;
-  contactMethod: string | null;
-  encryptedContactDetails: string | null;
-  hospitalTrust: string | null;
-  sha256Hash: string;
-  submittedAt: Date;
-  status: string;
-  priority: string;
-  assignedTo: string | null;
-  category: string | null;
-  eventDate: string | null;
-  eventTime: string | null;
-  riskLevel: string;
-  lastUpdated: Date;
-}
-
-interface Investigator {
-  id: number;
-  name: string;
-  email: string;
-  department: string | null;
-  isActive: string;
-}
+import type { Submission, Investigator } from "@shared/schema";
 
 interface SubmissionListProps {
   submissions: Submission[];

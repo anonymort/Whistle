@@ -19,24 +19,6 @@ import { format } from "date-fns";
 // Import types from shared schema instead of redefining them
 import type { Submission, CaseNote, Investigator } from "@shared/schema";
 
-interface CaseNote {
-  id: number;
-  submissionId: number;
-  note: string;
-  createdBy: string;
-  isInternal: string;
-  noteType: string;
-  createdAt: Date;
-}
-
-interface Investigator {
-  id: number;
-  name: string;
-  email: string;
-  department: string | null;
-  isActive: string;
-}
-
 interface AdminDashboardProps {
   onLogout: () => void;
 }
