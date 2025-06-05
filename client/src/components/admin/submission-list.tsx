@@ -31,7 +31,7 @@ export default function SubmissionList({
   onPriorityChange
 }: SubmissionListProps) {
   const formatDate = (date: Date) => {
-    return format(new Date(date), "MMM dd, yyyy 'at' HH:mm");
+    return dayjs(date).format("MMM DD, YYYY [at] HH:mm");
   };
 
   const calculateDaysRemaining = (submissionDate: Date) => {

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
+import dayjs from "dayjs";
 import type { Submission, Investigator } from "@shared/schema";
 
 interface SubmissionDetailsProps {
@@ -41,7 +41,7 @@ export default function SubmissionDetails({
   if (!submission) return null;
 
   const formatDate = (date: Date) => {
-    return format(new Date(date), "EEEE, MMMM dd, yyyy 'at' HH:mm");
+    return dayjs(date).format("dddd, MMMM DD, YYYY [at] HH:mm");
   };
 
   const calculateDaysRemaining = (submissionDate: Date) => {
