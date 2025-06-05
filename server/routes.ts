@@ -11,7 +11,7 @@ import connectPg from "connect-pg-simple";
 import { getAdminPublicKey, decryptData, rotateAdminKeys } from "./encryption";
 import { verifyPassword, hashPassword } from "./auth";
 import { auditLogger, AUDIT_ACTIONS } from "./audit";
-import { createAnonymousAlias, sendCaseAssignment, handleInboundEmail, sendSubmissionConfirmation } from "./postmark";
+import { createAnonymousAlias, sendCaseAssignment, handleInboundEmail, sendSubmissionConfirmation, sendNewSubmissionNotification } from "./postmark";
 import { generateCSRFToken, csrfProtection } from "./csrf";
 import { errorHandler, asyncHandler, ValidationError, AuthenticationError } from "./error-handler";
 import { validateNHSHospital, getNHSHospitalCount } from "./nhs-hospital-validator";
