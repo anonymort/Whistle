@@ -64,10 +64,28 @@ class PostmarkService {
   }
 
   /**
-   * Send an email via Postmark
+   * Send an email via Postmark with security validation
    */
   async sendEmail(emailData: PostmarkEmail): Promise<boolean> {
     try {
+      // SECURITY FIX: Validate email addresses to prevent injection
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailData.To) || !emailRegex.test(emailData.From)) {
+        console.error('Invalid email address format detected');
+        return false;
+      }
+
+      // SECURITY FIX: Sanitise subject and content to prevent header injection
+      const sanitisedEmailData = {
+        ...emailData,
+        Subject: emailData.Subject.replace(/[\r\n]/g, '').substring(0, 255),
+        TextBody: emailData.TextBody?.replace(/[\r\n]{3,}/g, '\n\n'),
+        HtmlBody: emailData.HtmlBody?.replace(/<script[^>]*>.*?<\/script>/gi, ''),
+        MessageStream: emailData.MessageStream || 'outbound',
+        TrackOpens: false, // Privacy protection
+        TrackLinks: 'None', // Privacy protection
+      };
+
       const response = await fetch(`${this.baseUrl}/email`, {
         method: 'POST',
         headers: {
@@ -75,12 +93,7 @@ class PostmarkService {
           'Content-Type': 'application/json',
           'X-Postmark-Server-Token': this.apiToken,
         },
-        body: JSON.stringify({
-          ...emailData,
-          MessageStream: emailData.MessageStream || 'outbound',
-          TrackOpens: false, // Privacy protection
-          TrackLinks: 'None', // Privacy protection
-        }),
+        body: JSON.stringify(sanitisedEmailData),
       });
 
       if (!response.ok) {

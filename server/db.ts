@@ -11,5 +11,17 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// SECURITY FIX: Enable SSL for database connections in production
+const poolConfig = {
+  connectionString: process.env.DATABASE_URL,
+  // Enforce SSL in production environments
+  ...(process.env.NODE_ENV === 'production' && {
+    ssl: {
+      rejectUnauthorized: false, // For managed database services like Neon
+      require: true
+    }
+  })
+};
+
+export const pool = new Pool(poolConfig);
 export const db = drizzle({ client: pool, schema });

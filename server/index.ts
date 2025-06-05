@@ -1,60 +1,94 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import crypto from "crypto";
 import dotenv from "dotenv";
 import { dataRetentionManager } from "./data-retention";
+import crypto from "crypto";
 
 // Load environment variables
 dotenv.config();
 
-// Security: Hash password function
-function hashPassword(password: string): string {
-  if (!process.env.SESSION_SECRET) {
-    throw new Error('SESSION_SECRET environment variable is required for secure password hashing');
+// SECURITY FIX: Enhanced environment variable validation
+function validateEnvironment() {
+  const requiredVars = ['SESSION_SECRET', 'ADMIN_USERNAME', 'ADMIN_PASSWORD_HASH', 'DATABASE_URL'];
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    console.error("❌ Missing required environment variables:", missingVars.join(', '));
+    process.exit(1);
   }
-  return crypto.pbkdf2Sync(password, process.env.SESSION_SECRET, 100000, 64, 'sha512').toString('hex');
+
+  // Validate SESSION_SECRET strength
+  if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 32) {
+    console.error("❌ SESSION_SECRET must be at least 32 characters long for security.");
+    process.exit(1);
+  }
+
+  // Warn about missing optional but recommended variables
+  const recommendedVars = ['POSTMARK_API_TOKEN', 'SENDGRID_API_KEY'];
+  const missingRecommended = recommendedVars.filter(varName => !process.env[varName]);
+  
+  if (missingRecommended.length > 0) {
+    console.warn("⚠️  Missing recommended environment variables:", missingRecommended.join(', '));
+    console.warn("   Email functionality may be limited.");
+  }
+
+  // Validate encryption keys are set for production
+  const encryptionVars = ['ADMIN_ENCRYPTION_PUBLIC_KEY', 'ADMIN_ENCRYPTION_PRIVATE_KEY', 'ADMIN_SIGNING_PUBLIC_KEY', 'ADMIN_SIGNING_PRIVATE_KEY'];
+  const missingEncryption = encryptionVars.filter(varName => !process.env[varName]);
+  
+  if (process.env.NODE_ENV === 'production' && missingEncryption.length > 0) {
+    console.warn("⚠️  Missing encryption keys in production:", missingEncryption.join(', '));
+    console.warn("   New keys will be generated but should be set via environment variables.");
+  }
 }
 
 // Validate required environment variables
-if (!process.env.SESSION_SECRET) {
-  console.error("❌ SESSION_SECRET is required. Please set it in your environment variables.");
-  process.exit(1);
-}
-
-if (!process.env.ADMIN_USERNAME) {
-  console.error("❌ ADMIN_USERNAME is required. Please set it in your environment variables.");
-  process.exit(1);
-}
-
-if (!process.env.ADMIN_PASSWORD_HASH) {
-  console.error("❌ ADMIN_PASSWORD_HASH is required. Please set it in your environment variables.");
-  process.exit(1);
-}
+validateEnvironment();
 
 const app = express();
 
 // Configure trust proxy for rate limiting behind reverse proxies
 app.set('trust proxy', 1);
 
-// Security headers for production
+// SECURITY FIX: Generate CSP nonce middleware
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
+// SECURITY FIX: Improved security headers for production
 if (process.env.NODE_ENV === "production") {
   app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("X-XSS-Protection", "1; mode=block");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    // SECURITY FIX: More restrictive CSP with proper nonce
     res.setHeader("Content-Security-Policy", 
       "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline'; " +
-      "style-src 'self' 'unsafe-inline'; " +
+      "script-src 'self' 'nonce-" + res.locals.nonce + "'; " +
+      "style-src 'self' 'nonce-" + res.locals.nonce + "'; " +
       "img-src 'self' data: blob:; " +
       "connect-src 'self'; " +
       "font-src 'self'; " +
       "object-src 'none'; " +
       "media-src 'self'; " +
-      "frame-src 'none';"
+      "frame-src 'none'; " +
+      "frame-ancestors 'none'; " +
+      "base-uri 'self';"
+    );
+    next();
+  });
+} else {
+  // Development CSP (more permissive for hot reload)
+  app.use((req, res, next) => {
+    res.setHeader("Content-Security-Policy", 
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+      "connect-src 'self' ws: wss:; " +
+      "img-src 'self' data: blob:;"
     );
     next();
   });
@@ -63,30 +97,32 @@ if (process.env.NODE_ENV === "production") {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false }));
 
+// SECURITY FIX: Improved logging that doesn't expose sensitive data
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+  // Only log non-sensitive endpoints
+  const isApiCall = path.startsWith("/api");
+  const isSensitiveEndpoint = path.includes('/decrypt') || 
+                             path.includes('/submissions') || 
+                             path.includes('/private-key') ||
+                             path.includes('/download');
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
+    if (isApiCall && !isSensitiveEndpoint) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
+      
+      // Never log response bodies for security
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
 
       log(logLine);
+    } else if (isApiCall && isSensitiveEndpoint) {
+      // Minimal logging for sensitive endpoints
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms [SENSITIVE]`);
     }
   });
 
@@ -104,12 +140,27 @@ app.use((req, res, next) => {
 
   const server = await registerRoutes(app);
 
+  // SECURITY FIX: Improved error handler that doesn't expose sensitive information
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    
+    // Generic error messages for production
+    let message = "Internal Server Error";
+    if (status === 400) message = "Bad Request";
+    else if (status === 401) message = "Unauthorized";
+    else if (status === 403) message = "Forbidden";
+    else if (status === 404) message = "Not Found";
+    else if (status === 429) message = "Too Many Requests";
+    
+    // Only expose detailed errors in development
+    if (process.env.NODE_ENV === "development") {
+      message = err.message || message;
+    }
 
-    res.status(status).json({ message });
-    throw err;
+    res.status(status).json({ error: message });
+    
+    // Log error for debugging (but not to client)
+    console.error(`Error ${status}:`, err.message);
   });
 
   // importantly only setup vite in development and after

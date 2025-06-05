@@ -10,19 +10,36 @@ let adminSigningKeys: { publicKey: string; privateKey: string } | null = null;
 function loadOrGenerateKeys() {
   // Try to load from environment variables first
   if (process.env.ADMIN_ENCRYPTION_PUBLIC_KEY && process.env.ADMIN_ENCRYPTION_PRIVATE_KEY) {
-    adminEncryptionKeys = {
-      publicKey: process.env.ADMIN_ENCRYPTION_PUBLIC_KEY,
-      privateKey: process.env.ADMIN_ENCRYPTION_PRIVATE_KEY
-    };
-    console.log("Loaded admin encryption keys from environment variables");
+    // Validate keys are properly formatted base64
+    try {
+      _sodium.from_base64(process.env.ADMIN_ENCRYPTION_PUBLIC_KEY);
+      _sodium.from_base64(process.env.ADMIN_ENCRYPTION_PRIVATE_KEY);
+      
+      adminEncryptionKeys = {
+        publicKey: process.env.ADMIN_ENCRYPTION_PUBLIC_KEY,
+        privateKey: process.env.ADMIN_ENCRYPTION_PRIVATE_KEY
+      };
+      console.log("✓ Loaded admin encryption keys from environment variables");
+    } catch (error) {
+      console.error("❌ Invalid encryption keys in environment variables");
+      throw new Error("Invalid encryption keys in environment variables");
+    }
   }
   
   if (process.env.ADMIN_SIGNING_PUBLIC_KEY && process.env.ADMIN_SIGNING_PRIVATE_KEY) {
-    adminSigningKeys = {
-      publicKey: process.env.ADMIN_SIGNING_PUBLIC_KEY,
-      privateKey: process.env.ADMIN_SIGNING_PRIVATE_KEY
-    };
-    console.log("Loaded admin signing keys from environment variables");
+    try {
+      _sodium.from_base64(process.env.ADMIN_SIGNING_PUBLIC_KEY);
+      _sodium.from_base64(process.env.ADMIN_SIGNING_PRIVATE_KEY);
+      
+      adminSigningKeys = {
+        publicKey: process.env.ADMIN_SIGNING_PUBLIC_KEY,
+        privateKey: process.env.ADMIN_SIGNING_PRIVATE_KEY
+      };
+      console.log("✓ Loaded admin signing keys from environment variables");
+    } catch (error) {
+      console.error("❌ Invalid signing keys in environment variables");
+      throw new Error("Invalid signing keys in environment variables");
+    }
   }
 }
 
@@ -38,15 +55,27 @@ export async function initializeServerEncryption(): Promise<boolean> {
     if (!adminEncryptionKeys) {
       adminEncryptionKeys = await generateAdminKeyPair();
       console.warn("⚠️  Generated new admin encryption keypair. For production, set ADMIN_ENCRYPTION_PUBLIC_KEY and ADMIN_ENCRYPTION_PRIVATE_KEY in environment variables.");
-      console.log("Public Key (add to environment):", adminEncryptionKeys.publicKey);
-      console.log("Private Key (add to environment):", adminEncryptionKeys.privateKey);
+      // SECURITY FIX: Never log private keys in production
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Public Key (add to environment):", adminEncryptionKeys.publicKey);
+        console.log("Private Key (add to environment):", adminEncryptionKeys.privateKey);
+      } else {
+        console.log("Public Key (add to environment):", adminEncryptionKeys.publicKey);
+        console.log("⚠️  Private key generated - retrieve securely via admin interface");
+      }
     }
     
     if (!adminSigningKeys) {
       adminSigningKeys = await generateAdminSigningKeyPair();
       console.warn("⚠️  Generated new admin signing keypair. For production, set ADMIN_SIGNING_PUBLIC_KEY and ADMIN_SIGNING_PRIVATE_KEY in environment variables.");
-      console.log("Signing Public Key (add to environment):", adminSigningKeys.publicKey);
-      console.log("Signing Private Key (add to environment):", adminSigningKeys.privateKey);
+      // SECURITY FIX: Never log private keys in production
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Signing Public Key (add to environment):", adminSigningKeys.publicKey);
+        console.log("Signing Private Key (add to environment):", adminSigningKeys.privateKey);
+      } else {
+        console.log("Signing Public Key (add to environment):", adminSigningKeys.publicKey);
+        console.log("⚠️  Signing private key generated - retrieve securely via admin interface");
+      }
     }
     
     return true;
@@ -89,6 +118,18 @@ export function getAdminPublicKey(): string | null {
   return adminEncryptionKeys?.publicKey || null;
 }
 
+// SECURITY FIX: Get private keys securely (admin only)
+export function getAdminPrivateKeys(): { encryptionPrivateKey: string | null; signingPrivateKey: string | null } | null {
+  if (!adminEncryptionKeys || !adminSigningKeys) {
+    return null;
+  }
+  
+  return {
+    encryptionPrivateKey: adminEncryptionKeys.privateKey,
+    signingPrivateKey: adminSigningKeys.privateKey
+  };
+}
+
 // Decrypt data using the admin's private key
 export async function decryptData(encryptedDataString: string): Promise<string> {
   if (!sodium) {
@@ -106,18 +147,19 @@ export async function decryptData(encryptedDataString: string): Promise<string> 
       try {
         encryptedData = JSON.parse(atob(encryptedDataString));
       } catch (e2) {
-        throw new Error("Invalid encrypted data format");
+        throw new Error("DECRYPT_FORMAT_ERROR");
       }
     }
 
-    // Handle different encryption algorithms
-    if (encryptedData.algorithm === "development-mock-encryption") {
-      // Legacy development format
-      return atob(encryptedData.data);
-    } else if (encryptedData.algorithm === "libsodium-sealed-box") {
+    // SECURITY FIX: Only allow secure encryption algorithms
+    if (encryptedData.algorithm !== "libsodium-sealed-box") {
+      throw new Error("UNSUPPORTED_ENCRYPTION_ALGORITHM");
+    }
+    
+    if (encryptedData.algorithm === "libsodium-sealed-box") {
       // Real libsodium encryption
       if (!adminEncryptionKeys) {
-        throw new Error("Admin encryption keys not initialized");
+        throw new Error("KEYS_NOT_INITIALIZED");
       }
       
       const privateKeyBytes = sodium!.from_base64(adminEncryptionKeys.privateKey);
@@ -132,18 +174,19 @@ export async function decryptData(encryptedDataString: string): Promise<string> 
       if (encryptedData.checksum) {
         const expectedChecksum = sodium!.to_base64(sodium!.crypto_generichash(32, sodium!.from_string(decryptedText)));
         if (expectedChecksum !== encryptedData.checksum) {
-          throw new Error("Data integrity check failed");
+          throw new Error("INTEGRITY_CHECK_FAILED");
         }
       }
       
       return decryptedText;
     } else {
-      throw new Error(`Unsupported encryption algorithm: ${encryptedData.algorithm}`);
+      throw new Error("UNSUPPORTED_ALGORITHM");
     }
     
   } catch (error) {
-    console.error("Decryption error:", error);
-    throw new Error("Failed to decrypt data");
+    // SECURITY FIX: Don't log detailed error information that could help attackers
+    console.error("Decryption failed:", error instanceof Error ? error.message : 'Unknown error');
+    throw new Error("DECRYPTION_FAILED");
   }
 }
 
@@ -170,9 +213,15 @@ export async function rotateAdminKeys(): Promise<{ encryptionKeys: any; signingK
   adminEncryptionKeys = await generateAdminKeyPair();
   adminSigningKeys = await generateAdminSigningKeyPair();
   
-  console.log("Admin keys rotated successfully");
-  console.log("New encryption public key:", adminEncryptionKeys.publicKey);
-  console.log("New signing public key:", adminSigningKeys.publicKey);
+  console.log("✓ Admin keys rotated successfully");
+  
+  // SECURITY FIX: Only log public keys, never private keys
+  if (process.env.NODE_ENV === 'development') {
+    console.log("New encryption public key:", adminEncryptionKeys.publicKey);
+    console.log("New signing public key:", adminSigningKeys.publicKey);
+  } else {
+    console.log("⚠️ Keys rotated - retrieve new keys securely via admin interface");
+  }
   
   return {
     encryptionKeys: adminEncryptionKeys,

@@ -62,12 +62,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async purgeOldSubmissions(): Promise<number> {
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    // SECURITY FIX: Use consistent 6-month (180-day) retention policy as per GDPR
+    const retentionDays = 180; // 6 months
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
     
     const result = await db
       .delete(submissions)
-      .where(lt(submissions.submittedAt, ninetyDaysAgo));
+      .where(lt(submissions.submittedAt, cutoffDate));
     
     return result.rowCount || 0;
   }

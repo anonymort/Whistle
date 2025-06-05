@@ -21,17 +21,17 @@ export default function AdminDashboard() {
     if (!sessionLoading) {
       if (sessionValid) {
         setIsAuthenticated(true);
-        sessionStorage.setItem('admin_authenticated', 'true');
+        // SECURITY FIX: Remove sessionStorage usage - rely on server-side sessions only
       } else {
         setIsAuthenticated(false);
-        sessionStorage.removeItem('admin_authenticated');
+        // SECURITY FIX: Remove sessionStorage usage - rely on server-side sessions only
       }
       setIsLoading(false);
     }
   }, [sessionValid, sessionLoading]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('admin_authenticated');
+    // SECURITY FIX: Remove sessionStorage usage - rely on server-side sessions only
     setIsAuthenticated(false);
     toast({
       title: "Logged Out",
@@ -41,7 +41,7 @@ export default function AdminDashboard() {
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
-    sessionStorage.setItem('admin_authenticated', 'true');
+    // SECURITY FIX: Remove sessionStorage usage - rely on server-side sessions only
   };
 
   if (isLoading) {

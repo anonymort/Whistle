@@ -91,7 +91,8 @@ function setupSession(app: Express) {
     throw new Error("SESSION_SECRET environment variable is required");
   }
 
-  const sessionTtl = 30 * 60 * 1000; // 30 minutes for admin sessions - reduced for security
+  // SECURITY FIX: Reduced session timeout for high-security applications
+  const sessionTtl = 15 * 60 * 1000; // 15 minutes for admin sessions (reduced from 30)
   const pgStore = connectPg(session);
   
   const sessionStore = new pgStore({
@@ -99,6 +100,19 @@ function setupSession(app: Express) {
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
+    // SECURITY FIX: Enable SSL for database connections in production
+    ...(process.env.NODE_ENV === 'production' && {
+      ssl: { rejectUnauthorized: false }
+    })
+  });
+
+  // SECURITY FIX: Add session cleanup on startup
+  sessionStore.pruneSessions((err) => {
+    if (err) {
+      console.error('Failed to prune expired sessions:', err);
+    } else {
+      console.log('✓ Expired sessions cleaned up');
+    }
   });
 
   app.use(session({
@@ -106,6 +120,7 @@ function setupSession(app: Express) {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    rolling: true, // SECURITY FIX: Reset expiry on each request
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -242,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return;
           }
           
-          // Validate file type based on mimetype and extension
+          // SECURITY FIX: Enhanced file type validation
           const allowedTypes = [
             'application/pdf',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
@@ -255,8 +270,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const allowedExtensions = ['.pdf', '.docx', '.pptx', '.doc', '.txt', '.csv'];
           const fileExtension = fileData.filename.toLowerCase().substring(fileData.filename.lastIndexOf('.'));
           
+          // SECURITY FIX: Sanitise filename to prevent path traversal attacks
+          const sanitisedFilename = fileData.filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+          if (sanitisedFilename !== fileData.filename) {
+            res.status(400).json({ error: "Invalid characters in filename. Only letters, numbers, dots, hyphens and underscores are allowed." });
+            return;
+          }
+          
+          // SECURITY FIX: Check for suspicious file patterns
+          const suspiciousPatterns = [
+            /\.exe$/i, /\.bat$/i, /\.cmd$/i, /\.com$/i, /\.scr$/i, /\.pif$/i,
+            /\.sh$/i, /\.php$/i, /\.asp$/i, /\.jsp$/i, /\.js$/i, /\.vbs$/i,
+            /\.\./,   // Path traversal
+            /[<>:"|?*]/  // Windows reserved characters
+          ];
+          
+          const hasSuspiciousPattern = suspiciousPatterns.some(pattern => pattern.test(fileData.filename));
+          if (hasSuspiciousPattern) {
+            res.status(400).json({ error: "Filename contains suspicious patterns that are not allowed." });
+            return;
+          }
+          
           if (!allowedTypes.includes(fileData.mimetype) || !allowedExtensions.includes(fileExtension)) {
             res.status(400).json({ error: "Unsupported file type. Only PDF, DOC, DOCX, PPT, CSV, and TXT files are allowed." });
+            return;
+          }
+          
+          // SECURITY FIX: Additional size check for Base64 overhead
+          const expectedDecodedSize = (fileBuffer.length * 3) / 4;
+          if (Math.abs(fileData.size - expectedDecodedSize) > 1024) { // Allow 1KB tolerance
+            res.status(400).json({ error: "File size mismatch detected. Possible data corruption." });
             return;
           }
 
@@ -369,17 +412,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // Health check endpoint
+  // SECURITY FIX: Health check endpoint with minimal information disclosure
   app.get("/api/health", async (req, res) => {
     try {
-      const submissionCount = await storage.getSubmissionCount();
+      // Don't expose detailed statistics to unauthorised users
       res.json({ 
         status: "healthy",
-        submissionCount,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        version: "1.0.0"
       });
     } catch (error) {
-      res.status(500).json({ status: "unhealthy", error: "Storage error" });
+      res.status(500).json({ status: "unhealthy" });
       return;
     }
   });
@@ -641,7 +684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin file download endpoint
+  // SECURITY FIX: Admin file download endpoint with proper validation and audit logging
   app.get("/api/admin/download/:submissionId", requireAdminAuth, async (req, res) => {
     try {
       const submissionId = parseInt(req.params.submissionId);
@@ -655,23 +698,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "File not found" });
       }
 
+      // Audit log file download
+      await auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: AUDIT_ACTIONS.EXPORT_DATA,
+        resource: 'submission_file',
+        details: { submissionId, filename: 'encrypted_attachment' },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        severity: 'medium'
+      });
+
       // Parse the file data directly (no decryption needed - HTTPS provides encryption)
       const fileInfo = JSON.parse(submission.encryptedFile);
-      console.log("File info:", {
-        filename: fileInfo.filename,
-        mimetype: fileInfo.mimetype,
-        size: fileInfo.size,
-        dataLength: fileInfo.data?.length || 0
-      });
+      
+      // SECURITY FIX: Validate file data structure and size
+      if (!fileInfo.filename || !fileInfo.mimetype || !fileInfo.data) {
+        return res.status(400).json({ error: "Invalid file data structure" });
+      }
       
       const fileBuffer = Buffer.from(fileInfo.data, 'base64');
-      console.log("Final buffer length:", fileBuffer.length);
       
-      // Set appropriate headers for download with original filename and mimetype
-      res.setHeader('Content-Disposition', `attachment; filename="${fileInfo.filename || 'attachment'}"`);
+      // SECURITY FIX: Enforce maximum file size (10MB limit)
+      if (fileBuffer.length > 10 * 1024 * 1024) {
+        return res.status(413).json({ error: "File too large to download" });
+      }
+      
+      // SECURITY FIX: Sanitise filename to prevent path traversal
+      const sanitisedFilename = fileInfo.filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      
+      // Set appropriate headers for download with sanitised filename
+      res.setHeader('Content-Disposition', `attachment; filename="${sanitisedFilename}"`);
       res.setHeader('Content-Type', fileInfo.mimetype || 'application/octet-stream');
       res.setHeader('Content-Length', fileBuffer.length.toString());
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
       
       // Send the buffer directly
       res.end(fileBuffer);
@@ -704,6 +765,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { rotateAdminKeys } = await import("./encryption");
       const newKeys = await rotateAdminKeys();
       
+      await auditLogger.log({
+        userId: (req.session as any).adminId,
+        action: AUDIT_ACTIONS.KEY_ROTATION,
+        resource: 'encryption_keys',
+        details: { timestamp: new Date().toISOString() },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        severity: 'high'
+      });
+      
       res.json({ 
         message: "Keys rotated successfully",
         publicKey: newKeys.encryptionKeys.publicKey
@@ -712,6 +783,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Key rotation error:", error);
       res.status(500).json({ error: "Key rotation failed" });
     }
+  });
+
+  // SECURITY FIX: Completely remove private key exposure endpoint - use environment variables instead
+  // Private keys should NEVER be accessible via API endpoints for security reasons
+  // Use environment variables or secure key management systems in production
+  app.get("/api/admin/private-keys", requireAdminAuth, async (req, res) => {
+    // SECURITY: This endpoint has been disabled for security reasons
+    await auditLogger.log({
+      userId: (req.session as any).adminId,
+      action: 'BLOCKED_PRIVATE_KEY_ACCESS',
+      resource: 'encryption_keys',
+      details: { 
+        timestamp: new Date().toISOString(),
+        reason: 'Endpoint disabled for security'
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      severity: 'critical'
+    });
+    
+    res.status(403).json({ 
+      error: "Private key access disabled for security", 
+      message: "Use secure environment variables or key management systems",
+      documentation: "Set ADMIN_ENCRYPTION_PRIVATE_KEY and ADMIN_SIGNING_PRIVATE_KEY environment variables"
+    });
   });
 
   // Case Management API Routes
@@ -941,8 +1037,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SECURITY FIX: Add rate limiting for investigator login
+  const investigatorLoginRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Max 5 login attempts per 15 minutes
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      auditLogger.log({
+        userId: req.body?.email || 'unknown',
+        action: AUDIT_ACTIONS.RATE_LIMIT_EXCEEDED,
+        resource: 'investigator_login',
+        severity: 'high',
+        outcome: 'blocked',
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        details: { endpoint: '/api/investigator/login', limit: 5, window: '15 minutes' }
+      });
+      res.status(429).json({ error: "Too many login attempts. Please try again later." });
+    },
+  });
+
   // Investigator Authentication Routes
-  app.post("/api/investigator/login", csrfProtection, async (req, res) => {
+  app.post("/api/investigator/login", investigatorLoginRateLimit, csrfProtection, async (req, res) => {
     try {
       const { email, password } = req.body;
 
@@ -1095,17 +1212,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Postmark webhook for inbound email processing
-  app.post("/api/postmark/inbound", express.raw({ type: 'application/json' }), asyncHandler(async (req: Request, res: Response) => {
+  // SECURITY FIX: Postmark webhook with proper validation and rate limiting
+  app.post("/api/postmark/inbound", generalApiRateLimit, express.raw({ type: 'application/json' }), asyncHandler(async (req: Request, res: Response) => {
     try {
+      // Validate the request is from Postmark (basic IP validation)
+      const postmarkIPs = ['3.134.147.250', '50.31.156.6', '50.31.156.77', '18.217.206.57'];
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      
+      // In production, enforce IP validation
+      if (process.env.NODE_ENV === 'production' && !postmarkIPs.includes(clientIP) && !clientIP.includes('127.0.0.1')) {
+        await auditLogger.log({
+          action: 'INVALID_WEBHOOK_ATTEMPT',
+          details: `Rejected webhook from IP: ${clientIP}`,
+          ipAddress: clientIP,
+          userAgent: req.get('User-Agent') || 'unknown',
+          severity: 'high'
+        });
+        return res.status(403).json({ error: "Unauthorised" });
+      }
+      
       const bodyString = req.body ? req.body.toString() : '{}';
       const inboundData = JSON.parse(bodyString);
       
+      // Validate required fields
+      if (!inboundData.To || !inboundData.From || !inboundData.Subject) {
+        return res.status(400).json({ error: "Invalid email data" });
+      }
+      
       await auditLogger.log({
+        userId: 'postmark_webhook',
         action: 'POSTMARK_INBOUND_EMAIL',
-        details: `Received inbound email to: ${inboundData.To}`,
+        resource: 'email_processing',
+        details: { to: inboundData.To, from: inboundData.From?.substring(0, 20) + '...', subject: inboundData.Subject?.substring(0, 50) + '...' },
         ipAddress: req.ip || 'unknown',
-        userAgent: req.get('User-Agent') || 'Postmark'
+        userAgent: req.get('User-Agent') || 'Postmark',
+        severity: 'medium'
       });
 
       const success = await handleInboundEmail(inboundData);
@@ -1121,8 +1262,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // SECURITY FIX: Add rate limiting for GDPR search to prevent brute force attacks
+  const gdprSearchRateLimit = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 10, // Max 10 searches per 5 minutes
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      auditLogger.log({
+        userId: (req.session as any)?.adminId || 'unknown',
+        action: 'GDPR_SEARCH_RATE_LIMIT_EXCEEDED',
+        resource: 'gdpr_search',
+        severity: 'high',
+        outcome: 'blocked',
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        details: { endpoint: '/api/admin/gdpr/search', limit: 10, window: '5 minutes' }
+      });
+      res.status(429).json({ error: "Too many search requests. Please wait before trying again." });
+    },
+  });
+
   // GDPR Subject Access Request endpoints
-  app.post("/api/admin/gdpr/search", requireAdminAuth, asyncHandler(async (req: Request, res: Response) => {
+  app.post("/api/admin/gdpr/search", requireAdminAuth, gdprSearchRateLimit, asyncHandler(async (req: Request, res: Response) => {
     try {
       const { term, type } = req.body;
       

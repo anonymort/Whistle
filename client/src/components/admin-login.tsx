@@ -40,7 +40,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
       return response.json();
     },
     onSuccess: () => {
-      sessionStorage.setItem('admin_authenticated', 'true');
+              // SECURITY FIX: Remove sessionStorage usage - rely on server-side sessions only
       onLoginSuccess();
       toast({
         title: "Login Successful",
