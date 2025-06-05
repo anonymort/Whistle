@@ -548,3 +548,114 @@ export async function sendAnonymousStatusUpdate(
 export async function handleInboundEmail(inboundData: any): Promise<boolean> {
   return await postmarkService.processInboundEmail(inboundData);
 }
+
+/**
+ * Send new submission notification to DAUK admin team
+ */
+export async function sendNewSubmissionNotification(
+  adminEmail: string,
+  submissionId: number,
+  referenceCode: string,
+  hospitalTrust: string,
+  category: string
+): Promise<boolean> {
+  const emailData: PostmarkEmail = {
+    From: 'noreply@dauk.org',
+    To: adminEmail,
+    Subject: 'New submission: Whistle',
+    HtmlBody: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+        <div style="background: #1e40af; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">New Whistleblowing Submission</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Doctors' Association UK</p>
+        </div>
+        
+        <div style="padding: 30px; background: white;">
+          <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #991b1b; font-weight: bold;">
+              🚨 New submission requiring review
+            </p>
+          </div>
+          
+          <h2 style="color: #1e40af; margin-bottom: 20px;">Submission Details</h2>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 10px 0; font-weight: bold; color: #374151;">Reference Code:</td>
+              <td style="padding: 10px 0; color: #111827;">${referenceCode}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 10px 0; font-weight: bold; color: #374151;">Submission ID:</td>
+              <td style="padding: 10px 0; color: #111827;">#${submissionId}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 10px 0; font-weight: bold; color: #374151;">Hospital/Trust:</td>
+              <td style="padding: 10px 0; color: #111827;">${hospitalTrust}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 10px 0; font-weight: bold; color: #374151;">Category:</td>
+              <td style="padding: 10px 0; color: #111827;">${category}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; font-weight: bold; color: #374151;">Submitted:</td>
+              <td style="padding: 10px 0; color: #111827;">${new Date().toLocaleString('en-GB')}</td>
+            </tr>
+          </table>
+          
+          <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="margin: 0; color: #0c4a6e; font-weight: bold;">Action Required:</p>
+            <p style="margin: 8px 0 0 0; color: #0c4a6e;">
+              Please log into the admin dashboard to review this submission and assign it to an appropriate investigator.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-domain.replit.app'}/admin" 
+               style="background: #1e40af; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Access Admin Dashboard
+            </a>
+          </div>
+          
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+              <strong>Security Notice:</strong> This email contains sensitive information about a whistleblowing submission. 
+              Handle with appropriate confidentiality and follow DAUK data protection protocols.
+            </p>
+          </div>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #6b7280; font-size: 12px;">
+            Doctors' Association UK (DAUK) | Confidential Whistleblowing Service<br>
+            This email contains confidential information. If received in error, please delete and notify sender.
+          </p>
+        </div>
+      </div>
+    `,
+    TextBody: `
+DAUK Whistleblowing Portal - New Submission Alert
+
+A new whistleblowing submission has been received and requires review.
+
+SUBMISSION DETAILS:
+Reference Code: ${referenceCode}
+Submission ID: #${submissionId}
+Hospital/Trust: ${hospitalTrust}
+Category: ${category}
+Submitted: ${new Date().toLocaleString('en-GB')}
+
+ACTION REQUIRED:
+Please log into the admin dashboard to review this submission and assign it to an appropriate investigator.
+
+Access the admin dashboard at: https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-domain.replit.app'}/admin
+
+SECURITY NOTICE:
+This email contains sensitive information about a whistleblowing submission. Handle with appropriate confidentiality and follow DAUK data protection protocols.
+
+Doctors' Association UK (DAUK) | Confidential Whistleblowing Service
+    `,
+    MessageStream: 'outbound'
+  };
+
+  return await postmarkService.sendEmail(emailData);
+}

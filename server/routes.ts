@@ -390,6 +390,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Send notification email to DAUK admin team
+      try {
+        await sendNewSubmissionNotification(
+          'contact@dauk.org',
+          newSubmission.id,
+          submissionHash.substring(0, 8),
+          validatedData.hospitalTrust || 'Unknown',
+          validatedData.category || 'General'
+        );
+      } catch (error) {
+        console.error("Failed to send admin notification email:", error);
+        // Don't fail the submission if email fails
+      }
+
       // Clean up old submissions (90-day retention)
       await storage.purgeOldSubmissions();
 
