@@ -14,6 +14,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { submitData } from "@/lib/queryClient";
 import { encryptData, encryptFile, initializeEncryption, isEncryptionReady } from "@/lib/encryption";
+import { NHSHospitalSearch } from "@/components/nhs-hospital-search";
+import { getHospitalByName } from "@/data/nhs-hospitals";
 import { Shield, FileText, AlertTriangle, User, MapPin, Clock, Lock } from "lucide-react";
 
 // Dynamic schema that validates based on contact method
@@ -41,7 +43,9 @@ const createSubmissionSchema = (contactMethod: string) => z.object({
   
   // Incident Details
   incidentDescription: z.string().min(10, "Please provide detailed description (minimum 10 characters)"),
-  hospitalTrust: z.string().min(1, "Hospital/Trust is required"),
+  hospitalTrust: z.string().min(1, "NHS Hospital/Trust is required").refine((value) => {
+    return getHospitalByName(value) !== undefined;
+  }, "Please select a valid NHS hospital or trust from the list"),
   incidentLocation: z.string().min(1, "Incident location is required"),
   eventDate: z.string().min(1, "Event date is required"),
   eventTime: z.string().optional(),
@@ -425,21 +429,15 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
                   name="hospitalTrust"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Hospital/NHS Trust</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Trust" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="leeds-teaching">Leeds Teaching Hospitals NHS Trust</SelectItem>
-                          <SelectItem value="manchester-foundation">Manchester University NHS Foundation Trust</SelectItem>
-                          <SelectItem value="imperial-college">Imperial College Healthcare NHS Trust</SelectItem>
-                          <SelectItem value="guys-thomas">Guy's and St Thomas' NHS Foundation Trust</SelectItem>
-                          <SelectItem value="other">Other (please specify in description)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>NHS Hospital/Trust</FormLabel>
+                      <NHSHospitalSearch
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Search 736 authentic NHS hospitals..."
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Search authentic NHS hospitals and trusts. Selection restricted to verified NHS facilities only.
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

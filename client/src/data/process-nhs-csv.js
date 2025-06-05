@@ -13,8 +13,13 @@ const csvContent = fs.readFileSync(csvPath, 'utf8');
 // Parse CSV lines and extract hospital names
 const lines = csvContent.trim().split('\n');
 const hospitals = lines
-  .map(line => line.split(',')[0].trim())
-  .filter(name => name && name.length > 0)
+  .map(line => {
+    // Handle CSV with potential quoted values
+    const firstField = line.split(',')[0];
+    // Remove quotes if present and trim
+    return firstField.replace(/^"|"$/g, '').trim();
+  })
+  .filter(name => name && name.length > 0 && !name.includes('"'))
   .sort()
   .map((name, index) => ({
     id: index + 1,
