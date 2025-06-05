@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { format } from "date-fns";
+import dayjs from "dayjs";
 
 interface CaseNote {
   id: number;
@@ -225,7 +225,7 @@ export default function CaseNotesPanel({
 
                     <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
                       <span>By: {note.createdBy}</span>
-                      <span>{format(new Date(note.createdAt), "MMM dd, yyyy 'at' HH:mm")}</span>
+                      <span>{dayjs(note.createdAt).format("MMM DD, YYYY [at] HH:mm")}</span>
                     </div>
                   </div>
                 ))}

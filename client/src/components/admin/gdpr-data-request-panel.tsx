@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { submitData } from "@/lib/queryClient";
-import { format } from "date-fns";
+import dayjs from "dayjs";
 
 interface Submission {
   id: number;
@@ -376,7 +376,7 @@ export default function GDPRDataRequestPanel({ submissions, onDecrypt }: GDPRDat
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div className="flex items-center space-x-2">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span>Submitted: {format(new Date(submission.submittedAt), 'PPP')}</span>
+                            <span>Submitted: {dayjs(submission.submittedAt).format('MMMM DD, YYYY')}</span>
                           </div>
                           
                           <div className="flex items-center space-x-2">
