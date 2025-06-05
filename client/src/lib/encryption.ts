@@ -63,7 +63,7 @@ export async function encryptData(plaintext: string): Promise<string> {
     const encryptedData = {
       algorithm: 'libsodium-sealed-box',
       data: ciphertextBase64,
-      checksum: sodium.to_hex(sodium.crypto_generichash(32, plaintextBytes))
+      checksum: sodium.to_base64(sodium.crypto_generichash(32, plaintextBytes))
     };
     
     return JSON.stringify(encryptedData);
