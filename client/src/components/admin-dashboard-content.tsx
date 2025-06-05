@@ -72,7 +72,13 @@ export default function AdminDashboardContent({ onLogout }: AdminDashboardProps)
       return await submitData('/api/admin/decrypt', { encryptedData });
     },
     onSuccess: (data) => {
-      setDecryptedData(data);
+      // Transform server response format to match expected frontend format
+      const transformedData = {
+        message: data.decryptedText || data.message || "",
+        fileName: data.fileName,
+        fileData: data.fileData
+      };
+      setDecryptedData(transformedData);
       setDetailsDialogOpen(true);
     },
     onError: (error) => {
