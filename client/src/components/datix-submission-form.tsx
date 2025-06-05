@@ -245,6 +245,44 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
                 </FormItem>
               )}
             />
+
+            {/* Email input field for email contact method */}
+            {form.watch("contactMethod") === "email" && (
+              <FormField
+                control={form.control}
+                name="reporterEmail"
+                render={({ field }) => (
+                  <FormItem className="mt-4">
+                    <FormLabel>Your Email Address</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="email" 
+                        placeholder="your.email@nhs.net"
+                        required
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      You will receive updates about your submission at this email address.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Anonymous reply service description */}
+            {form.watch("contactMethod") === "anonymous_reply" && (
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  Anonymous Reply Service
+                </h4>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  We'll create a secure anonymous email alias that allows two-way communication 
+                  while protecting your identity. You'll receive a unique reply address after submission.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
