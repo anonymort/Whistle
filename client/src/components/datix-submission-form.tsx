@@ -43,8 +43,10 @@ const submissionSchema = z.object({
   witnessesPresent: z.boolean(),
   witnessDetails: z.string().optional(),
   
-  // Reporter info (conditional)
+  // Reporter info (conditional based on contact method)
   reporterName: z.string().optional(),
+  reporterEmail: z.string().email().optional(),
+  reporterJobTitle: z.string().optional(),
   reporterDepartment: z.string().optional(),
   reporterStaffId: z.string().optional(),
   relationshipToIncident: z.enum(["involved", "witness", "second_hand"]),
@@ -100,6 +102,8 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
       eventTime: "",
       incidentDescription: "",
       reporterName: "",
+      reporterEmail: "",
+      reporterJobTitle: "",
       reporterDepartment: "",
       reporterStaffId: "",
       relationshipToIncident: "involved",
@@ -126,16 +130,18 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
         
         // Contact method and anonymity settings (not encrypted)
         contactMethod: data.contactMethod,
-        remainsAnonymous: data.contactMethod === "anonymous",
+        remainsAnonymous: data.contactMethod === "anonymous" ? "true" : "false",
         
         // Encrypt reporter identity data if provided
         encryptedReporterName: data.reporterName ? await encryptData(data.reporterName) : null,
+        encryptedJobTitle: data.reporterJobTitle ? await encryptData(data.reporterJobTitle) : null,
         encryptedDepartment: data.reporterDepartment ? await encryptData(data.reporterDepartment) : null,
         encryptedStaffId: data.reporterStaffId ? await encryptData(data.reporterStaffId) : null,
         reporterRelationship: data.relationshipToIncident,
         
         // Encrypt contact details if provided
-        encryptedContactDetails: data.contactDetails ? await encryptData(data.contactDetails) : null,
+        encryptedContactDetails: data.contactDetails || data.reporterEmail ? 
+          await encryptData(data.contactDetails || data.reporterEmail || "") : null,
         
         // Incident details (hospitalTrust not encrypted for admin filtering)
         hospitalTrust: data.hospitalTrust,
@@ -345,6 +351,114 @@ export default function DatixSubmissionForm({ onSuccess }: DatixSubmissionFormPr
             </div>
           </CardContent>
         </Card>
+
+        {/* Reporter Identity (shown when not anonymous) */}
+        {form.watch("contactMethod") !== "anonymous" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <User className="w-5 h-5" />
+                <span>Reporter Information</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="reporterName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Enter your full name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reporterEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="email" placeholder="your.email@nhs.net" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reporterJobTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g. Staff Nurse, Consultant" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reporterDepartment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department/Ward</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g. Emergency Department" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reporterStaffId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Staff ID (Optional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Staff identification number" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="relationshipToIncident"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Relationship to Incident</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select relationship" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="involved">Directly involved</SelectItem>
+                          <SelectItem value="witness">Witnessed the incident</SelectItem>
+                          <SelectItem value="second_hand">Heard from others</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Classification */}
         <Card>
