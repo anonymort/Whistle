@@ -25,7 +25,8 @@ function loadNHSHospitals(): void {
     nhsHospitals = lines
       .map(line => {
         // Handle CSV with potential quoted values
-        const firstField = line.split(',')[0];
+        const fields = line.split(',');
+        const firstField = fields[0] || '';
         // Remove quotes if present and trim
         return firstField.replace(/^"|"$/g, '').trim();
       })
